@@ -5,6 +5,7 @@ import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
 import type { Ator } from '../../audit/audit.types';
 import { travarAtivoOuFalhar } from '../../asset/use-cases/lock-asset.usecase';
 import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase';
+import { normalizeSerial } from '../helpers/normalize-identity.helper';
 
 // O VÍNCULO — a afirmação de que esta máquina descoberta e aquele patrimônio são
 // a mesma coisa (D45).
@@ -13,31 +14,26 @@ import type { ClienteQueTrava } from '../../person/use-cases/lock-person.usecase
 // aplicação. O que este arquivo acrescenta é a MENSAGEM (o P2002 cru viraria
 // "Registro já existe.", que não diz nada a quem está na tela) e o AuditLog.
 
-const JA_TEM_MAQUINA = 'Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Descobertas.';
+const JA_TEM_MAQUINA = 'Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Agentes.';
 
 interface OrigemDoVinculo {
   automatico?: boolean;
   sinal?: string | null;
-  /** A sugestão aceita na tela: fecha como `ACCEPTED` na transação do vínculo. */
-  sugestaoId?: string;
 }
 
 /**
- * Liga endpoint e ativo, e fecha as sugestões que o assunto tornou obsoletas.
+ * Liga endpoint e ativo.
  *
- * As sugestões `LINK` pendentes DESTE endpoint viram `SUPERSEDED` na mesma
- * transação — inclusive as que apontavam para OUTROS ativos. Não é limpeza
- * cosmética: uma máquina só é um ativo, então depois do vínculo as outras
- * propostas passaram a ser sobre um mundo que não existe mais. Deixá-las
- * pendentes ofereceria a quem abrisse a fila a chance de "aceitar" um segundo
- * vínculo que o `@unique` recusaria com um erro sem explicação.
+ * O vínculo à mão religa o automático da máquina (`autoLinkOff`): quem vinculou
+ * decidiu qual computador ela é. O automático desiste da máquina que alguém
+ * desvinculou no meio, e devolve `null` sem gravar nada (DC).
  */
 export async function vincularEndpointAoAtivo(
   endpointId: string,
   assetId: string,
   /**
-   * Quem vincula: a conta que aceitou ou vinculou na tela, ou o job da
-   * reconciliação no vínculo automático (`match-endpoint.usecase.ts`).
+   * Quem vincula: a conta que vinculou na tela, ou o sistema no vínculo
+   * automático (`auto-link-endpoint.usecase.ts`).
    */
   ator: Ator,
   origem: OrigemDoVinculo = {},
@@ -51,23 +47,14 @@ export async function vincularEndpointAoAtivo(
       await travarAtivoOuFalhar(tx, assetId);
       await travarEndpoint(tx, endpointId);
 
-      // O ACEITE fecha aqui, antes de o vínculo encerrar as outras como
-      // `SUPERSEDED`: numa transação só, ele não fica pela metade — a sugestão
-      // aceita e encerrada, apagada pelo expurgo na rodada seguinte. Condicional:
-      // dois aceites ao mesmo tempo, e o segundo a encontra resolvida.
-      if (origem.sugestaoId) {
-        const { count } = await tx.reconciliationSuggestion.updateMany({
-          where: { id: origem.sugestaoId, endpointId, state: 'PENDING' },
-          data: { state: 'ACCEPTED', resolvedAt: new Date() },
-        });
-        if (count === 0) throw new AppError('Esta sugestão já foi resolvida.', 409);
-      }
-
       const endpoint = await tx.endpoint.findUnique({
         where: { id: endpointId },
-        select: { id: true, hwid: true, hostname: true, assetId: true },
+        select: { id: true, hwid: true, hostname: true, assetId: true, autoLinkOff: true, biosSerial: true },
       });
       if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
+      // A máquina já estava travada: o Desvincular que confirmou depois de a
+      // regra ler a máquina chega aqui, e ela não volta sozinha.
+      if (origem.automatico && endpoint.autoLinkOff) return null;
       if (endpoint.assetId && endpoint.assetId !== assetId) {
         throw new AppError('Esta máquina já está vinculada a outro computador.', 409);
       }
@@ -77,14 +64,18 @@ export async function vincularEndpointAoAtivo(
       // uma máquina viva e sumiria da tela levando o vínculo junto.
       const ativo = await tx.asset.findFirst({
         where: { id: assetId },
-        select: { id: true, assetTag: true, name: true, retiredAt: true },
+        select: { id: true, assetTag: true, name: true, retiredAt: true, serial: true },
       });
       if (!ativo) throw new AppError('Computador não encontrado.', 404);
+      // A regra leu as séries fora da trava: a do computador editada no meio
+      // não liga pela série antiga.
+      const serie = normalizeSerial(endpoint.biosSerial);
+      if (origem.automatico && (!serie || normalizeSerial(ativo.serial) !== serie)) return null;
 
       // Ativo BAIXADO não recebe máquina: ele saiu do patrimônio, e o vínculo
       // o traria de volta à cobertura e à telemetria como se fosse da empresa.
       // A máquina que segue mandando sinal de um ativo vendido é um achado, não
-      // um vínculo — ela fica sem cadastro, que é onde a tela de descobertas a
+      // um vínculo — ela fica sem computador, que é onde a tela Agentes a
       // mostra.
       if (ativo.retiredAt) {
         throw new AppError(`${ativo.assetTag} teve baixa e não recebe máquina. Reverta a baixa antes.`, 409);
@@ -93,7 +84,7 @@ export async function vincularEndpointAoAtivo(
       // JÁ É ESTE O VÍNCULO: nada muda, e nada se grava. A entrega que falhou e
       // é refeita (`link-and-checkout.usecase.ts`) e o duplo clique chegam aqui,
       // e uma linha LINK afirmaria um vínculo novo que já existia.
-      if (endpoint.assetId === assetId) return endpoint;
+      if (endpoint.assetId === assetId) return { id: endpoint.id, hwid: endpoint.hwid, hostname: endpoint.hostname, assetId };
 
       // O vínculo NÃO passa pela regra do posto: ativo é computador com ou sem
       // máquina vinculada, então a vaga da mesa foi decidida na ENTREGA
@@ -102,13 +93,8 @@ export async function vincularEndpointAoAtivo(
 
       const vinculado = await tx.endpoint.update({
         where: { id: endpointId },
-        data: { assetId },
+        data: { assetId, autoLinkOff: false },
         select: { id: true, hwid: true, hostname: true, assetId: true },
-      });
-
-      await tx.reconciliationSuggestion.updateMany({
-        where: { endpointId, state: 'PENDING' },
-        data: { state: 'SUPERSEDED', resolvedAt: new Date() },
       });
 
       await recordAudit(tx, {
@@ -121,7 +107,6 @@ export async function vincularEndpointAoAtivo(
           hwid: { de: null, para: endpoint.hwid },
           origem: { de: null, para: origem.automatico ? 'automatico' : 'manual' },
           sinal: { de: null, para: origem.sinal ?? null },
-          ...(origem.sugestaoId ? { sugestaoId: { de: null, para: origem.sugestaoId } } : {}),
         },
       }, ator);
 
@@ -141,12 +126,9 @@ export async function vincularEndpointAoAtivo(
  * que havia — a mesma linha que, quando o `onDelete: SetNull` desfizer um
  * vínculo sozinho ao apagar um ativo, vai ser a única testemunha do que existia.
  *
- * NÃO encerra sugestão nenhuma, e isso é o que o parque permite: sugestão de
- * vínculo só nasce para máquina SEM ativo (`match-endpoint.usecase.ts`), e o
- * `vincular` acima encerra as pendentes na mesma transação em que grava o
- * `assetId`. Máquina vinculada não tem pendente, então aqui não havia o que
- * encerrar — a rodada seguinte do job é que volta a propor, com a máquina já
- * sem vínculo.
+ * Desliga o automático da máquina (`autoLinkOff`): sem isso, o próximo
+ * handshake a ligaria de novo ao mesmo computador pela série, e o vínculo errado
+ * não teria correção. Quem a liga de novo é o Vincular (DC).
  */
 export async function desvincularEndpoint(endpointId: string, ator: Ator) {
   return prisma.$transaction(async (tx) => {
@@ -161,7 +143,7 @@ export async function desvincularEndpoint(endpointId: string, ator: Ator) {
 
     const desvinculado = await tx.endpoint.update({
       where: { id: endpointId },
-      data: { assetId: null },
+      data: { assetId: null, autoLinkOff: true },
       select: { id: true, hwid: true, hostname: true, assetId: true },
     });
 

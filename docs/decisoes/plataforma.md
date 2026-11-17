@@ -831,6 +831,8 @@ próprio registro (BQ).
 
 ## CE — O computador numa aba de ficha tem um molde só
 
+> **Superada em parte por [DF](./reconciliacao.md#df--a-máquina-tem-ficha-em-agentes):** a ficha da máquina usa a mesma tabela, sem as duas datas da entrega.
+
 **Decisão.** A aba Computadores do colaborador e a aba Computador do posto passam a ser a mesma tabela,
 `ComputadoresNaFicha`: Etiqueta, com a série embaixo; Modelo, com o fabricante embaixo; Categoria; Status; Devolução
 prevista; e Desde. As regras de negócio não mudaram, e nenhuma rota é nova.

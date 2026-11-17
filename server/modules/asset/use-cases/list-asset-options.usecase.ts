@@ -11,7 +11,7 @@ interface AssetOption {
 
 /**
  * Lista enxuta de ativos para `<select>` — o seletor de máquina da entrega de
- * licença, o da entrega de componente (AI) e o do vínculo em `/descobertas`
+ * licença, o da entrega de componente (AI) e o do vínculo em `/agentes`
  * (este com `semMaquina`).
  *
  * O `name` que sai daqui é COMPOSTO — `"ATV-00012 — Dell Latitude"` — e não a
@@ -24,7 +24,7 @@ interface AssetOption {
  */
 interface FiltroDeOpcoesDeAtivo {
   /**
-   * Só ativo SEM máquina vinculada. É o seletor de `/descobertas`: vincular a
+   * Só ativo SEM máquina vinculada. É o seletor de `/agentes`: vincular a
    * máquina a um ativo que já tem outra é o que `endpoints.assetId @unique`
    * recusa, então a lista nem oferece.
    */

@@ -12,6 +12,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { assertStatusCoerenteComPosse } from './assert-status-posse.usecase';
 import type { CreateAssetData } from './create-asset.usecase';
+import { vincularMaquinaDoComputador } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 
 /** `updatedAt`: a versão que o formulário leu (AF). */
 type UpdateAssetData = Partial<CreateAssetData> & { updatedAt?: Date };
@@ -22,7 +23,7 @@ function valorFinal<T>(novo: T | undefined, atual: T): T {
 }
 
 export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator) {
-  return prisma.$transaction(async (tx) => {
+  const salvo = await prisma.$transaction(async (tx) => {
     // A TRAVA, antes de qualquer leitura. Estar dentro da transação não basta
     // para a guarda estado × posse abaixo: em READ COMMITTED a entrega
     // simultânea confirma a posse DEPOIS da guarda olhar, e o `UPDATE` daqui
@@ -147,4 +148,9 @@ export async function updateAsset(id: string, data: UpdateAssetData, ator: Ator)
     // nenhum (`ASSET_WRITE_SELECT`, D77).
     return semCusto(depois);
   });
+
+  // O computador vivo com série procura a máquina que chegou antes dele (DC).
+  // Depois da transação: o vínculo trava a máquina e o ativo de novo, em outra.
+  await vincularMaquinaDoComputador(id);
+  return salvo;
 }

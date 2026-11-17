@@ -63,6 +63,8 @@ export interface HandshakeData {
    * manda. `undefined` quando o agente não mandou: aí a lista gravada fica como estava.
    */
   gpus: GpuData[] | undefined;
+  /** A versão do agente (`AgentVersion`, A25 de lá). Nula no agente que não a manda. */
+  agentVersion: string | null;
 }
 
 /**

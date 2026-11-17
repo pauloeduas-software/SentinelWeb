@@ -21,17 +21,19 @@ export function usePaginaLocal<T>(linhas: readonly T[]) {
 }
 
 /**
- * A lista que chega inteira do servidor (Descobertas): filtra aqui, com a busca e a
+ * A lista que chega inteira do servidor (Agentes): filtra aqui, com a busca e a
  * página na URL, como toda lista (BB). `textoDaLinha` diz onde a busca procura.
  */
 export function useListaLocalNaUrl<T>(linhas: readonly T[], textoDaLinha: (linha: T) => string) {
   const {
-    search, changeSearch, page, perPage, setPage, parametros,
+    search, changeSearch, page, perPage, setPage, parametros, filtrar: filtrarNaUrl,
   } = useListaNaUrl();
 
   const achadas = filtrar(linhas, search, textoDaLinha);
 
-  return { search, changeSearch, perPage, setPage, parametros, total: achadas.length, ...fatiar(achadas, page) };
+  return {
+    search, changeSearch, perPage, setPage, parametros, filtrar: filtrarNaUrl, total: achadas.length, ...fatiar(achadas, page),
+  };
 }
 
 /**

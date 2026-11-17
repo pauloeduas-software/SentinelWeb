@@ -430,7 +430,7 @@ test('o Adicionar do ⋯ da lista abre o painel sem sair dela, e a linha já tra
   conferirConsole();
 });
 
-test('a Máquina é a mesma no posto e no computador, e quem desvincula é Descobertas', async ({ page, request }) => {
+test('a Máquina é a mesma no posto e no computador, e a linha dela abre a ficha da máquina', async ({ page, request }) => {
   const conferirConsole = vigiarConsole(page);
   const { posto, ativo, assetTag } = await computadorNoPosto(request, `Mesa da máquina ${Date.now()}`);
   const hostname = `NB-${ativo.slice(0, 8)}`;
@@ -480,20 +480,37 @@ test('a Máquina é a mesma no posto e no computador, e quem desvincula é Desco
   await expect(aba.getByRole('row', { name: new RegExp(assetTag) })).toBeVisible();
   await expect(aba.getByText(`hw-${ativo}`)).toHaveCount(0);
 
+  // A linha da máquina abre a ficha dela (DF): o card diz o que ela diz de si, a aba
+  // Computador abre o computador, e a aba Máquina fica só com a medida e os comandos.
+  const { id: maquina } = await prisma.endpoint.findUniqueOrThrow({ where: { hwid: `hw-${ativo}` } });
   await page.goto(`/computadores/${ativo}?aba=maquina`);
   await aba.getByRole('row', { name: new RegExp(hostname) }).click();
-  await expect(page).toHaveURL(new RegExp(`/descobertas\\?aba=com&busca=${hostname}$`));
-  const linha = page.getByRole('row', { name: new RegExp(hostname) });
-  await expect(linha).toContainText(assetTag);
+  await expect(page).toHaveURL(new RegExp(`/agentes/${maquina}$`));
+  await expect(page.getByRole('banner').getByRole('heading', { name: hostname })).toBeVisible();
+  await expect(principal.getByText(`hw-${ativo}`)).toBeVisible();
+  await expect(aba.getByRole('row', { name: new RegExp(assetTag) })).toBeVisible();
+  await principal.getByRole('tab', { name: 'Máquina' }).click();
+  await expect(aba.getByText('Como está agora')).toBeVisible();
+  await expect(aba.getByText(`hw-${ativo}`)).toHaveCount(0);
 
-  await page.getByRole('button', { name: `Ações de ${hostname}` }).click();
-  await page.getByRole('menuitem', { name: 'Desvincular' }).click();
+  await principal.getByRole('button', { name: 'Desvincular' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Desvincular' }).click();
   await expect(page.getByText('Máquina desvinculada.')).toBeVisible();
-  await expect(linha).toHaveCount(0);
+  await principal.getByRole('tab', { name: 'Computador' }).click();
+  await expect(aba.getByText('Esta máquina não está vinculada a um computador.')).toBeVisible();
 
   await page.goto(`/computadores/${ativo}?aba=maquina`);
   await expect(aba.getByText('Nenhuma máquina vinculada a este computador.')).toBeVisible();
+
+  // Sem computador, a linha da lista também abre a ficha, e é dela que a máquina se exclui.
+  await page.goto(`/agentes?vista=sem&busca=${hostname}`);
+  await principal.getByRole('row', { name: new RegExp(hostname) }).click();
+  await expect(page).toHaveURL(new RegExp(`/agentes/${maquina}$`));
+  await principal.getByRole('button', { name: `Ações de ${hostname}` }).click();
+  await page.getByRole('menuitem', { name: 'Excluir' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Excluir' }).click();
+  await expect(page.getByText('Máquina excluída.')).toBeVisible();
+  await expect(page).toHaveURL(/\/agentes$/);
 
   conferirConsole();
 });

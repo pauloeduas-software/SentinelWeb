@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { criarAdministrador } from '../../server/modules/access/cli/criar-administrador.cli';
-import { rodarReconciliacao } from '../../server/modules/reconciliation/jobs/reconcile.job';
+import { rodarRodadaDaHora } from '../../server/modules/reconciliation/jobs/reconcile.job';
 import { criarApi, type ApiDeTeste, type Resposta } from '../helpers/app';
 import { conectarAgente, esperarPor } from '../helpers/agente';
 import {
@@ -182,57 +182,24 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.delete(`/api/licenses/${errada.body.id}`));
   });
 
-  it('usuários e configurações', async () => {
+  it('usuários', async () => {
     const usuario = await auditada(api.post<{ id: string }>('/api/users', {
       name: 'Conta Auditada', email: `conta.${proximo()}@teste.local`,
     }));
     await auditada(api.put(`/api/users/${usuario.body.id}`, { name: 'Conta Renomeada' }));
     await auditada(api.post(`/api/users/${usuario.body.id}/temporary-password`));
     await auditada(api.delete(`/api/users/${usuario.body.id}`));
-
-    const { body } = await api.get<{ ghostDays: number }>('/api/settings/discovery');
-    await auditada(api.put('/api/settings/discovery', { ghostDays: body.ghostDays + 1 }));
   });
 
-  it('a configuração salva no banco sem a linha diz só o que a conta mandou', async () => {
-    // O banco restaurado sem a linha: o "de" são os padrões que a tela mostrava,
-    // e o modo, que a conta não mandou, não aparecem como escolha dela.
-    await prisma.appSetting.deleteMany();
-    const salvo = await auditada(api.put('/api/settings/discovery', { ghostDays: 10 }));
-
-    const linha = await prisma.auditLog.findFirstOrThrow({ where: { requestId: salvo.headers['x-request-id'] as string } });
-    expect(linha.changes).toEqual({ ghostDays: { de: 30, para: 10 } });
-  });
-
-  it('conciliação: rodada, aceite, recusa, desvínculo e vínculo com entrega', async () => {
-    const par = async () => {
-      const serial = `SN-AUD-${proximo()}`;
-      const ativo = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, serial, assetTag: `AUD-${proximo()}` });
-      const maquina = await prisma.endpoint.create({
-        data: { hwid: `aud-${proximo()}`, hostname: `pc-auditado-${contador}`, osVersion: 'Windows 11', biosSerial: serial },
-        select: { id: true },
-      });
-      return { ativo, maquina };
-    };
-    const aceito = await par();
-    const recusado = await par();
-
-    await auditada(api.post('/api/reconciliation/run', {}));
-    const pendente = (endpointId: string) => prisma.reconciliationSuggestion.findFirstOrThrow({
-      where: { endpointId, state: 'PENDING' },
+  it('o vínculo: vincular, desvincular e vincular com entrega', async () => {
+    // A máquina direto no banco, sem handshake: o vínculo automático não roda, e
+    // quem vincula é a conta (DC).
+    const ativo = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, assetTag: `AUD-${proximo()}` });
+    const maquina = await prisma.endpoint.create({
+      data: { hwid: `aud-${proximo()}`, hostname: `pc-auditado-${contador}`, osVersion: 'Windows 11' },
+      select: { id: true },
     });
-    const sugestao = await pendente(aceito.maquina.id);
-    await auditada(api.post(`/api/reconciliation/suggestions/${sugestao.id}/accept`, {}));
-    // O aceite e o vínculo são uma coisa só: a sugestão fechada como ACEITA (e
-    // não como substituída pelo próprio vínculo), e a linha diz qual foi.
-    expect((await prisma.reconciliationSuggestion.findUniqueOrThrow({ where: { id: sugestao.id } })).state)
-      .toBe('ACCEPTED');
-    const vinculo = await prisma.auditLog.findFirstOrThrow({ where: { entityId: aceito.ativo.id, action: 'LINK' } });
-    expect(vinculo.changes).toMatchObject({ sugestaoId: { de: null, para: sugestao.id } });
-    await auditada(api.post(`/api/reconciliation/suggestions/${(await pendente(recusado.maquina.id)).id}/reject`, {}));
-    await auditada(api.delete(`/api/endpoints/${aceito.maquina.id}/link`));
 
-    const { maquina, ativo } = recusado;
     await auditada(api.post(`/api/endpoints/${maquina.id}/link`, { assetId: ativo.id }));
     // O mesmo vínculo de novo não muda nada, e nada se grava: uma linha LINK
     // afirmaria um vínculo novo que já existia.
@@ -245,6 +212,14 @@ describe('toda escrita do painel deixa rastro com a conta da sessão', () => {
     await auditada(api.post(`/api/endpoints/${maquina.id}/link-and-checkout`, {
       assetId: ativo.id, targetWorkstationId: mesa,
     }));
+  });
+
+  it('a exclusão da máquina', async () => {
+    const maquina = await prisma.endpoint.create({
+      data: { hwid: `aud-${proximo()}`, hostname: `pc-excluido-${contador}`, osVersion: 'Windows 11' },
+      select: { id: true },
+    });
+    await auditada(api.delete(`/api/endpoints/${maquina.id}`));
   });
 
   it('a saída da conta', async () => {
@@ -392,15 +367,15 @@ describe('a linha não se altera nem se apaga', () => {
 });
 
 describe('o que roda sozinho', () => {
-  it('o agente e a rodada do job em SUGGEST não mexem em cadastro nem gravam auditoria', async () => {
-    const serial = `SN-JOB-${proximo()}`;
-    await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, serial, assetTag: `JOB-${proximo()}` });
+  it('o agente sem série conhecida e a rodada do job não mexem em cadastro nem gravam auditoria', async () => {
+    // A série do computador e a da máquina são outras: o vínculo automático, que
+    // grava como o sistema, tem teste próprio (`vinculo-automatico.test.ts`).
+    await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, serial: `SN-JOB-${proximo()}`, assetTag: `JOB-${proximo()}` });
+    const serial = `SN-OUTRA-${proximo()}`;
 
-    // O retrato de tudo que o job não pode tocar — menos o último contato, que
-    // é dele (`lastSeenByAgentAt`).
+    // O retrato de tudo que o job não pode tocar.
     const retrato = async () => ({
-      ativos: (await prisma.asset.findMany({ orderBy: { id: 'asc' } }))
-        .map((ativo) => ({ ...ativo, lastSeenByAgentAt: null })),
+      ativos: await prisma.asset.findMany({ orderBy: { id: 'asc' } }),
       posses: await prisma.assignment.findMany({ orderBy: { id: 'asc' } }),
       estoque: await prisma.stockMovement.findMany({ orderBy: { id: 'asc' } }),
       vinculos: await prisma.endpoint.findMany({ select: { id: true, assetId: true }, orderBy: { id: 'asc' } }),
@@ -413,7 +388,7 @@ describe('o que roda sozinho', () => {
     await agente.handshake({ BiosSerial: serial, Hostname: 'pc-do-job' });
     await esperarPor('a máquina do job', () => prisma.endpoint.findUnique({ where: { hwid } }));
     await agente.fechar();
-    await rodarReconciliacao();
+    await rodarRodadaDaHora();
 
     expect(await prisma.auditLog.count()).toBe(linhasAntes);
     const depois = await retrato();

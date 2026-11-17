@@ -38,8 +38,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 5 | A forma da posse: um alvo coerente, devolução depois da entrega — e só a posse **devolvida** de um posto excluído fica sem FK, com o nome por escrito | **banco** — dois `CHECK` | 422 com frase própria, porque a API recusa antes; quem escreve direto no banco (seed, `psql`) recebe o erro do `CHECK` |
 | 6 | Colaborador desativado ou na lixeira não tem posse direta, **licença**, **unidade de estoque** nem ocupação aberta | **aplicação** — 409 na desativação (`personSpec.beforeWrite`), na exclusão (`personSpec.motivoParaNaoExcluir`), no `checkout` e no cadastro de ocupante + trava de linha | 409 `Este colaborador ainda responde por 2 computadores (ATV-00012 e ATV-00013), 1 licença (Office), 3 unidades de estoque (Mouse USB ×2 e Teclado) e 1 posto (Mesa 1). Devolva o que foi entregue a ele e registre a saída dele do posto antes de excluir.` (ou *antes de desativar*), com os computadores, as licenças, os itens e os postos como `refs` — a tela põe um link em cada um |
 | 9 | A forma da entrega de licença: o alvo é UM (pessoa **ou** ativo), a devolução vem depois da entrega, e toda entrega em uso aponta para a licença | **banco** — três `CHECK` em `license_checkouts`, com a FK `Restrict` | 422 com o campo que falta (a API recusa antes, com frase própria) |
-| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Descobertas.` |
-| 13 | A mesma sugestão não empilha na fila | **banco** — índice único parcial `sugestao_pendente_por_alvo` | nada: o job trata o `P2002` como "outro já criou" |
+| 12 | Uma máquina é no máximo um ativo, e um ativo no máximo uma máquina | **banco** — `@unique` em `Endpoint.assetId` | 409 `Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Agentes.` |
 | 17 | Sempre existe alguém ativo que é `ADMIN` | **aplicação** — `assertSobraAdministrador()`, DEPOIS da escrita e dentro da transação, na edição e na exclusão de usuário | 409 `Esta mudança deixaria o sistema sem nenhum administrador capaz de entrar. Mantenha outra conta de Administrador ativa antes de seguir.` |
 | 19 | No máximo um ativo por posto de trabalho, também no passado | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto), que também não começa antes da última devolução no posto; **banco** — índice único parcial `assignments_um_aberto_por_posto` | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.`; 422 `A entrega (01/03/2026) não pode ser antes da última devolução no posto Mesa 1: ATV-00042 saiu dele em 10/06/2026, e o posto tem um computador por vez.` |
 | 20 | Ativo baixado ou na lixeira não tem posse aberta, licença, componente nem máquina | **aplicação** — quatro portas: a baixa e a lixeira (`assertSemPosse`, as contagens de licenças e de componentes e `assertSemMaquina`), a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`) e o vínculo (`link-endpoint-asset`), todas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Reverta a baixa antes.` |
@@ -311,40 +310,12 @@ serial em duas máquinas, a antiga ainda ligada — [CV](../decisoes/reconciliac
 e o serial casa com um ativo que já tem endpoint. Sem o índice, o segundo vínculo
 entraria e a tela do ativo passaria a mostrar a máquina errada, escolhida por
 ordem de consulta. Com ele, a tentativa é recusada com 409, apontando para
-"Desvincular" da lista Vinculadas, em Descobertas. A reimagem reconhecida não
+"Desvincular" da vista Com computador, em Agentes. A reimagem reconhecida não
 chega aqui: ela herda a própria linha, com o vínculo dentro.
 
 > `onDelete: SetNull` é o outro lado: apagar um ativo de verdade **não** leva
 > junto a telemetria da máquina. O preço é que o vínculo se desfaz em silêncio, e
 > é por isso que existe linha de auditoria para `UNLINK`.
-
-### 13 — `sugestao_pendente_por_alvo`
-
-```sql
-CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
-  ON "reconciliation_suggestions" ("endpointId",
-    COALESCE("assetId", '00000000-0000-0000-0000-000000000000'::uuid))
-  WHERE "state" = 'PENDING';
-```
-
-**PARCIAL porque o histórico PRECISA repetir:** a mesma sugestão pode ter sido
-recusada em março, substituída em abril e aceita em maio, e as três linhas contam
-essa história. O que não pode repetir é o que está **esperando decisão**.
-
-**Um alvo só, `assetId`:** a sugestão só propõe vínculo.
-
-**`COALESCE` continua, mesmo com um alvo só** — e não é cerimônia: a coluna
-segue nulável, e em Postgres dois `NULL` nunca colidem num índice único. Uma
-linha `PENDING` com `assetId` nulo (bug, carga à mão) voltaria a poder empilhar
-sem limite, em silêncio, sem o `COALESCE`.
-
-O que ele protege não é o banco: é a **fila**. O job roda de hora em hora sobre a
-frota inteira e reencontra as mesmas evidências; sem o índice, uma semana de
-operação vira 168 cópias de cada sugestão, e a fila que deveria ser lida por uma
-pessoa vira uma lista que ninguém abre duas vezes.
-
-> **Provado em** `tests/descoberta/fila.test.ts`: três rodadas seguidas do job e a
-> contagem de `PENDING` não cresce.
 
 ---
 
@@ -446,7 +417,7 @@ Na lixeira é o mesmo: restaurá-lo o devolveria a quem talvez não possa mais t
 | porta | o que ela impede |
 | --- | --- |
 | `delete-asset.usecase.ts` | mandar para a lixeira o ativo **entregue** — `Este computador está entregue e não pode ir para a lixeira. Faça a devolução antes.` —, com **licença**, com **componente** ([AL](../decisoes/posse.md#al--o-computador-entregue-não-vai-para-a-lixeira)) ou com **máquina** vinculada ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)) |
-| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` —, que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` —, que **tem componente** instalado — `Retire pela tela de Estoque antes de dar baixa.` ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) — ou que **tem máquina** vinculada — `Desvincule pela tela de Descobertas antes de dar baixa.` (CL) |
+| `retire-asset.usecase.ts` | dar baixa em ativo **entregue** — `Faça a devolução antes.` —, que **tem licença** — `Devolva pela tela de Licenças antes de dar baixa.` —, que **tem componente** instalado — `Retire pela tela de Estoque antes de dar baixa.` ([AI](../decisoes/estoque.md#ai--o-componente-é-uma-categoria-vai-só-para-computador-e-sai-pelo-retirar)) — ou que **tem máquina** vinculada — `Desvincule na tela Agentes antes de dar baixa.` (CL) |
 | `checkout-asset.usecase.ts` | **entregar** ativo baixado — e isso vale com **qualquer** status, porque a baixa não mexe no status: um vendido pode estar "Disponível" |
 | `link-endpoint-asset.usecase.ts` | **vincular máquina** a ativo baixado (409) ou na lixeira (404) |
 
@@ -455,7 +426,7 @@ A entrega de **licença** a ativo (`checkout-license.usecase.ts`) e a de
 a licença ou a peça ficaria presa a uma máquina que não existe mais.
 
 **A máquina** seguiria na cobertura de quem saiu, com a telemetria e os comandos de
-reiniciar e desligar. A recusa da baixa e da lixeira leva a Descobertas, onde mora o
+reiniciar e desligar. A recusa da baixa e da lixeira leva a Agentes, onde mora o
 Desvincular (`assertSemMaquina`, em `get-asset-machine.usecase.ts`).
 
 **Bloqueia, nunca fecha a posse sozinha** — o mesmo argumento da invariante 4.
@@ -688,13 +659,6 @@ vão escapados.
   que divergir. É o D16 aplicado ao acesso: guardar o cargo no token exigiria
   reemitir a sessão a cada troca, e no dia em que a reemissão falhasse alguém
   continuaria alcançando o que já lhe foi tirado.
-- **A fila de sugestões não fala de gente.** Ela só propõe vínculo entre máquina e ativo:
-  não há sugestão sobre pessoa desativada para recusar nem para invalidar. O que
-  `invalidate-suggestions.usecase.ts` encerra como `SUPERSEDED` é a pendente cuja
-  máquina, ou cujo ativo, ganhou vínculo por outro caminho, e a do ativo que teve baixa
-  ou foi para a lixeira — que já encerram as suas na mesma transação (CL) — e isso é regra de
-  PROPOSTA, não fato sobre linhas gravadas: entre duas rodadas do job, a pendente
-  obsoleta existe no banco.
 
 ---
 

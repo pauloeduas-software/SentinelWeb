@@ -86,3 +86,30 @@ describe('o inventário que a aba Máquina mostra (DA)', () => {
     await agente.fechar();
   });
 });
+
+describe('a versão do agente (DE)', () => {
+  it('grava o AgentVersion, devolve na lista e na aba Máquina, e o handshake sem ela a apaga', async () => {
+    const agente = await conectarAgente(api, 'hwid-versao');
+    await agente.handshake({ Hostname: 'pc-versao', AgentVersion: '0.2.0' });
+    const endpoint = await esperarPor('a versão gravada', async () => {
+      const achado = await buscar('hwid-versao');
+      return achado?.agentVersion ? achado : null;
+    });
+    expect(endpoint.agentVersion).toBe('0.2.0');
+
+    const lista = await api.get<{ rows: { id: string; agentVersion: string | null }[] }>('/api/endpoints');
+    expect(lista.body.rows.find((linha) => linha.id === endpoint.id)?.agentVersion).toBe('0.2.0');
+    expect((await api.get<{ agentVersion: string | null }>(`/api/endpoints/${endpoint.id}`)).body.agentVersion).toBe('0.2.0');
+
+    // AO CONTRÁRIO DA SÉRIE: o handshake sem versão é de um agente anterior à
+    // A25 (reinstalado com o pacote velho), e a versão gravada mentiria.
+    await agente.handshake({ Hostname: 'pc-versao-velha' });
+    const depois = await esperarPor('o handshake do agente velho', async () => {
+      const achado = await buscar('hwid-versao');
+      return achado?.hostname === 'pc-versao-velha' ? achado : null;
+    });
+    expect(depois.agentVersion).toBeNull();
+
+    await agente.fechar();
+  });
+});

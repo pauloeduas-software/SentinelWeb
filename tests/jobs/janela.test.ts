@@ -7,7 +7,7 @@ import { criarApi, type ApiDeTeste } from '../helpers/app';
 //
 // O QUE ESTA SUÍTE EXISTE PARA IMPEDIR é o bug que a decisão descreve e que
 // NINGUÉM notaria em produção: com uma coluna só (`AppSetting.lastAlertRunAt`),
-// dois jobs — hoje, a reconciliação e o expurgo da telemetria — fariam
+// dois jobs — hoje, a rodada da hora e o expurgo da telemetria — fariam
 // compare-and-set no mesmo lugar. O primeiro a acordar venceria; o segundo
 // receberia `count: 0`, leria como "já rodou hoje" e nunca executaria. Todo
 // dia, sem erro e sem log.

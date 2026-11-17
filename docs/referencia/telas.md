@@ -15,10 +15,10 @@ O visual é o da AY. Tela nova usa os primitivos de `src/components/ui/` e estas
 | `PaginaCabecalho` | só o título e o voltar: nenhum botão no cabeçalho (BB) |
 | `CartoesDeContagem` | o número que filtra |
 | `FormularioLateral` | todo formulário |
-| `CartaoDaFicha` e `TabelaDaFicha` | a ficha em página: computador, colaborador, posto, item e licença |
+| `CartaoDaFicha` e `TabelaDaFicha` | a ficha em página: computador, colaborador, posto, item, licença e máquina |
 | `AcoesDaLinha` | o `⋯` |
 | `PessoaNaLinha` | a pessoa na lista: o avatar, o nome e o e-mail embaixo |
-| `ComputadoresNaFicha` | o computador numa aba de ficha: no posto e no colaborador |
+| `ComputadoresNaFicha` | o computador numa aba de ficha: no posto, no colaborador e na máquina |
 | `LinhaDoResponsavel` | a linha da aba Responsáveis, que abre a ficha do responsável |
 | `AvisoDaLixeira` | a ficha aberta da Lixeira: computador e colaborador |
 | `confirmar()` (`hooks/useConfirmacao`) | a pergunta, nunca `confirm()` |
@@ -82,10 +82,10 @@ mostram a senha no painel aberto, e a troca obrigatória de senha, que já leva 
   passado. Toda ficha tem a sua, em `LinhaDoTempo`.
 - **A aba que lista diz quantas linhas tem (`ContagemDaAba`),** o Histórico também: no estoque, as entregas, e não as
   unidades. A Máquina, que não é lista, fica sem número.
-- **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB, CD).** As cinco fichas têm as ações
+- **A ação da ficha fica no card (`CartaoDaFicha`), e nenhuma aba repete botão (BB, CD).** As seis fichas têm as ações
   da linha da lista, com as mesmas frases.
 - **O computador numa aba é uma tabela só (CE):** `ComputadoresNaFicha`, no posto e no colaborador, com as colunas da
-  lista de Computadores e as duas datas da entrega.
+  lista de Computadores e as duas datas da entrega. Na máquina, sem as datas (`semEntrega`, DF).
 - **A aba Responsáveis é uma só (BQ):** a `ListToolbar` com a busca (`?quem=`) e o box com uma linha por responsável e a
   ação à direita. Entregue a um posto, a linha é o posto, com quem está nele embaixo (BL), e a busca acha também por
   essas pessoas. A linha abre a ficha do responsável, o colaborador, o posto ou o computador, menos quando o clique é

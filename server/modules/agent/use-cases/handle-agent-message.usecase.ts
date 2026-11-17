@@ -3,7 +3,9 @@ import { toHandshakeData, toTelemetryData } from '../helpers/normalize-payload.h
 import { registerHandshake } from '../../endpoint/use-cases/register-handshake.usecase';
 import { saveTelemetry } from '../../endpoint/use-cases/save-telemetry.usecase';
 import { touchEndpoint } from '../../endpoint/use-cases/touch-endpoint.usecase';
+import { vincularPelaSerie } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 import { shortHwid } from '../../endpoint/helpers/hwid.helper';
+import { desconectarAgente } from '../agent.registry';
 import { createLogger } from '../../../infra/logger/logger';
 
 const logger = createLogger('agent.message');
@@ -17,9 +19,19 @@ export async function handleAgentMessage(message: ParsedAgentMessage): Promise<v
   await touchEndpoint(message.hwid);
 
   switch (message.type) {
-    case 'Handshake':
-      await registerHandshake(toHandshakeData(message));
+    case 'Handshake': {
+      // O vínculo automático depois de gravar: é a série DESTE handshake que a
+      // regra compara com o cadastro, como o GLPI na chegada do inventário (DC).
+      const endpointId = await registerHandshake(toHandshakeData(message));
+      // Excluída entre a conferência da credencial no maestro e a gravação: a
+      // conexão fecha, como a exclusão fecharia se já a tivesse achado.
+      if (!endpointId) {
+        desconectarAgente(message.hwid, 'Máquina excluída');
+        break;
+      }
+      await vincularPelaSerie(endpointId);
       break;
+    }
 
     case 'Telemetry':
       await saveTelemetry(toTelemetryData(message));

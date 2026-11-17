@@ -1,6 +1,6 @@
 import { prisma } from '../../../infra/database/prismaClient';
 import { SEM_BAIXA } from '../../asset/helpers/asset-filters.helper';
-import { lerConfiguracaoDaDescoberta } from '../helpers/discovery-settings.helper';
+import { DIAS_SEM_CONTATO, limiteDeSumido } from '../../endpoint/helpers/endpoint-filters.helper';
 
 // O PAINEL DE COBERTURA — a pergunta que só existe depois de os dois lados se
 // falarem: *quanto do parque o sistema realmente enxerga?*
@@ -14,8 +14,13 @@ export interface Cobertura {
   /** Desses, quantos têm máquina vinculada. */
   comAgente: number;
   semAgente: number;
-  /** SUMIDO: já foi visto por um agente, e não dá sinal há mais de `ghostDays`. */
+  /**
+   * As MÁQUINAS sem sinal há mais de `DIAS_SEM_CONTATO`, com computador ou sem: o
+   * número da vista Sumidos, onde se desvincula e se exclui (DD).
+   */
   sumidos: number;
+  /** O prazo dos sumidos, que a frase do painel cita. */
+  diasSemContato: number;
 }
 
 /**
@@ -27,10 +32,6 @@ export interface Cobertura {
  * painel em que ninguém confia.
  */
 export async function calcularCobertura(): Promise<Cobertura> {
-  const configuracao = await lerConfiguracaoDaDescoberta();
-
-  const limiteSumido = new Date(Date.now() - configuracao.ghostDays * 24 * 60 * 60 * 1000);
-
   // `SEM_BAIXA` porque ativo VENDIDO não está sumido: ele saiu do
   // patrimônio de propósito, e contá-lo como falha de cobertura encheria o
   // painel de acertos contábeis (D19).
@@ -39,8 +40,8 @@ export async function calcularCobertura(): Promise<Cobertura> {
   const [cadastrados, comAgente, sumidos] = await prisma.$transaction([
     prisma.asset.count({ where: vivos }),
     prisma.asset.count({ where: { ...vivos, endpoint: { isNot: null } } }),
-    prisma.asset.count({ where: { ...vivos, lastSeenByAgentAt: { lt: limiteSumido } } }),
+    prisma.endpoint.count({ where: { lastSeen: { lt: limiteDeSumido() } } }),
   ]);
 
-  return { cadastrados, comAgente, semAgente: cadastrados - comAgente, sumidos };
+  return { cadastrados, comAgente, semAgente: cadastrados - comAgente, sumidos, diasSemContato: DIAS_SEM_CONTATO };
 }

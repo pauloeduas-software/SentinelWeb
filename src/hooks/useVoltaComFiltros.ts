@@ -14,12 +14,9 @@ export interface Volta {
   state?: unknown;
 }
 
-/**
- * O `state` de quem abre uma ficha: os filtros da lista vão junto, e a seta volta com eles.
- * `lista` é para quem abre a ficha de outra tela: Descobertas abre a do computador.
- */
-export function comFiltros(parametros: URLSearchParams, lista?: string) {
-  return { state: { filtros: parametros.toString(), lista } };
+/** O `state` de quem abre uma ficha: os filtros da lista vão junto, e a seta volta com eles. */
+export function comFiltros(parametros: URLSearchParams) {
+  return { state: { filtros: parametros.toString() } };
 }
 
 /**
@@ -34,7 +31,8 @@ export function useVoltaParaEstaFicha(): EstadoDaVolta {
 
 /** Quem abriu a ficha: a seta diz para onde volta. `lista` é a da própria ficha. */
 export function rotuloDaVolta(para: string, lista: string): string {
-  if (para.startsWith('/descobertas')) return 'Descobertas';
+  if (para.startsWith('/agentes/')) return 'Máquina';
+  if (para.startsWith('/agentes')) return 'Agentes';
   if (para.startsWith('/postos/')) return 'Posto';
   if (para.startsWith('/colaboradores/')) return 'Colaborador';
   if (para.startsWith('/computadores/')) return 'Computador';

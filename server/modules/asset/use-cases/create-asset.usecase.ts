@@ -9,6 +9,7 @@ import { buildSnapshot } from '../../shared/diff.helper';
 import { assertGarantiaNaoAntecedeACompra } from '../helpers/asset-dates.helper';
 import { ASSET_SELECT, CAMPOS_AUDITADOS_DO_ATIVO, semCusto } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
+import { vincularMaquinaDoComputador } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 
 export interface CreateAssetData {
   assetTag?: string;
@@ -33,7 +34,7 @@ export async function createAsset(data: CreateAssetData, ator: Ator) {
     warrantyExpiresAt: data.warrantyExpiresAt ?? null,
   });
 
-  return prisma.$transaction(async (tx) => {
+  const salvo = await prisma.$transaction(async (tx) => {
     // O modelo, o status e o local pelas portas do catálogo: 404 com nome no
     // lugar do P2003 genérico. Nenhum deles se desativa (AO).
     const modelo = await lerModeloTravado(tx, data.modelId);
@@ -91,4 +92,9 @@ export async function createAsset(data: CreateAssetData, ator: Ator) {
     // como na edição.
     return semCusto(ativo);
   });
+
+  // O computador vivo com série procura a máquina que chegou antes dele (DC).
+  // Depois da transação: o vínculo trava a máquina e o ativo de novo, em outra.
+  await vincularMaquinaDoComputador(salvo.id);
+  return salvo;
 }

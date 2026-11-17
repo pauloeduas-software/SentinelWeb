@@ -83,6 +83,21 @@ export function sendToAgent(hwid: string, packet: AgentCommandPacket): Promise<E
   });
 }
 
+/**
+ * Fecha a conexão aberta da máquina, com 1008: a credencial dela acabou de ser
+ * apagada (DD), e a reconexão leva 401. Devolve se havia conexão a fechar.
+ */
+export function desconectarAgente(hwid: string, motivo: string): boolean {
+  const socket = activeAgents.get(sanitizeHwid(hwid));
+  if (!socket) return false;
+  try {
+    socket.close(1008, motivo);
+  } catch (error) {
+    logger.warn(`[Agent] Falha ao encerrar a conexão de ${shortHwid(hwid)}:`, error);
+  }
+  return true;
+}
+
 // Encerramento gracioso: avisa os agentes antes de o processo sair, para que
 // reconectem em vez de esperar o timeout.
 export function disconnectAllAgents(): void {

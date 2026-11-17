@@ -6,7 +6,7 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 // VINCULAR A MÁQUINA AO ATIVO E ENTREGAR O ATIVO AO POSTO — numa operação só.
 //
 // É o cadastro de um computador novo contado de ponta a ponta: a máquina
-// apareceu em `/descobertas`, o ativo foi cadastrado, e a mesa dele é a Mesa 1.
+// apareceu em `/agentes`, o ativo foi cadastrado, e a mesa dele é a Mesa 1.
 // São duas operações do sistema (o vínculo, da convergência; a entrega, da
 // posse), e esta função só as encadeia — nada aqui escreve direto.
 //
@@ -14,8 +14,7 @@ import { vincularEndpointAoAtivo } from './link-endpoint-asset.usecase';
 // NÃO É UMA TRANSAÇÃO, e isso é limite declarado, não esquecimento.
 //
 // `vincularEndpointAoAtivo` e `checkoutAsset` abrem cada um a SUA `$transaction`,
-// e o Prisma não suporta aninhar uma na outra (o aviso em caixa alta está no
-// `upsert-suggestion.usecase.ts`). A escolha é agir em sequência, e deixar a
+// e o Prisma não suporta aninhar uma na outra. A escolha é agir em sequência, e deixar a
 // ordem errar para o lado certo.
 //
 // A ORDEM É VINCULAR PRIMEIRO. Se a entrega falhar, o que fica é um vínculo

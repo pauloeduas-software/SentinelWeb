@@ -1,9 +1,5 @@
-import type { DiscoveryMode } from '@prisma/client';
 import { prisma } from '../../../infra/database/prismaClient';
 import { AppError } from '../../../infra/errors/app-error';
-import { recordAudit } from '../../audit/use-cases/record-audit.usecase';
-import type { Ator } from '../../audit/audit.types';
-import { buildChanges } from '../../shared/diff.helper';
 import { APP_SETTING_ID, formatAssetTag } from '../helpers/app-setting.helper';
 
 type ClienteComEtiqueta = Pick<typeof prisma, 'appSetting' | 'asset'>;
@@ -94,59 +90,4 @@ export async function peekNextAssetTag(): Promise<{ assetTag: string }> {
   // Sem etiqueta livre à vista, o formulário abre com o campo vazio e o usuário
   // digita — em vez de mostrar um número que o salvamento recusaria.
   return { assetTag: '' };
-}
-
-// ── A CONFIGURAÇÃO DA DESCOBERTA ────────────────────────────────────────────
-
-/**
- * Salva os botões da convergência RMM × ITAM.
- *
- * `discoveryMode` é o mais perigoso dos dois e por isso vale reler o D51 antes
- * de mexer: em `ON`, a varredura VINCULA sozinha a máquina ao ativo quando há um
- * único candidato de 100 pontos (`match-endpoint.usecase.ts`), sem ninguém
- * conferir. Não cria ativo nem consome etiqueta — máquina sem candidato segue
- * sem cadastro —, mas um vínculo errado põe o último contato e a telemetria da
- * máquina no ativo errado até alguém desvincular.
- *
- * A validação dos limites é do schema, não daqui: `ghostDays: 0` faria a frota
- * inteira contar como sumida no dia seguinte.
- */
-const CAMPOS_DA_DESCOBERTA = ['discoveryMode', 'ghostDays'] as const;
-const SELECT_DA_DESCOBERTA = { discoveryMode: true, ghostDays: true } as const;
-
-export async function salvarConfiguracaoDaDescoberta(
-  dados: {
-    discoveryMode?: DiscoveryMode;
-    ghostDays?: number;
-  },
-  ator: Ator,
-) {
-  return prisma.$transaction(async (tx) => {
-    // A linha existe ANTES do "de": no banco sem ela, o "de" são os padrões que
-    // a tela mostrava, e não nulo — senão a auditoria punha na conta os dois
-    // campos que ela nem mandou.
-    await ensureAppSettings(tx);
-
-    // A linha travada antes de ler o "de": dois salvamentos ao mesmo tempo
-    // leriam o mesmo modo, e a auditoria diria "de SUGGEST" nas duas trocas.
-    await tx.$queryRaw`SELECT id FROM app_settings WHERE id = ${APP_SETTING_ID} FOR NO KEY UPDATE`;
-    const antes = await tx.appSetting.findUniqueOrThrow({ where: { id: APP_SETTING_ID }, select: SELECT_DA_DESCOBERTA });
-
-    const depois = await tx.appSetting.update({
-      where: { id: APP_SETTING_ID },
-      data: dados,
-      select: SELECT_DA_DESCOBERTA,
-    });
-
-    // A linha é única e sem uuid: o registro é a própria configuração (AB).
-    // Ligar o vínculo automático é a mudança que mais importa saber quem fez.
-    const changes = buildChanges(antes, depois, CAMPOS_DA_DESCOBERTA);
-    if (Object.keys(changes).length > 0) {
-      await recordAudit(tx, {
-        entityType: 'AppSetting', entityId: null, entityLabel: 'Configuração da descoberta', action: 'UPDATE', changes,
-      }, ator);
-    }
-
-    return depois;
-  });
 }

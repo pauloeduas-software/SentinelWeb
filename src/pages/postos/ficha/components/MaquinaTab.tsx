@@ -10,7 +10,7 @@ import { ativosComMaquina } from '../../helpers/postos.helper';
 // pergunta já vem com dono: "o computador da Mesa 1 está bem?". E é no posto que ela
 // se faz, porque é a mesa que tem ocupante e turno — em outra aba, nesta mesma ficha.
 //
-// A aba é a mesma do computador: só o painel, com a linha que leva a Descobertas,
+// A aba é a mesma do computador: só o painel, com a linha que leva a Agentes,
 // onde mora o vínculo (BX, BZ).
 
 interface MaquinaTabProps {

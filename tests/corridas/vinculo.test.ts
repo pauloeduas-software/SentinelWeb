@@ -79,29 +79,3 @@ describe('duas desvinculações da mesma máquina, ao mesmo tempo', () => {
     expect(await prisma.auditLog.count({ where: { action: 'UNLINK', entityId: a.id } })).toBe(1);
   });
 });
-
-describe('dois aceites da MESMA sugestão, ao mesmo tempo', () => {
-  it('passa um só: a sugestão fica aceita, e a auditoria tem um LINK só', async () => {
-    contador += 1;
-    const serial = `SN-ACEITE-${contador}`;
-    const a = await criarAtivo(api, { statusId: seed.statusDeployableId, modelId, serial, assetTag: `CV-${String(contador).padStart(3, '0')}` });
-    const pc = await prisma.endpoint.create({
-      data: { hwid: 'corrida-aceite', hostname: 'pc-corrida-aceite', osVersion: 'Windows 11', biosSerial: serial },
-      select: { id: true },
-    });
-    expect((await api.post('/api/reconciliation/run', {})).status).toBe(200);
-    const sugestao = await prisma.reconciliationSuggestion.findFirstOrThrow({
-      where: { endpointId: pc.id, state: 'PENDING' },
-    });
-
-    const respostas = await Promise.all([
-      api.post(`/api/reconciliation/suggestions/${sugestao.id}/accept`, {}),
-      api.post(`/api/reconciliation/suggestions/${sugestao.id}/accept`, {}),
-    ]);
-
-    expect(placar(respostas)).toEqual({ 200: 1, 409: 1 });
-    expect((await prisma.reconciliationSuggestion.findUniqueOrThrow({ where: { id: sugestao.id } })).state)
-      .toBe('ACCEPTED');
-    expect(await prisma.auditLog.count({ where: { action: 'LINK', entityId: a.id } })).toBe(1);
-  });
-});

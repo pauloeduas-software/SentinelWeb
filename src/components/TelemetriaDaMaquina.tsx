@@ -1,19 +1,19 @@
 import type { ReactNode } from 'react';
 import {
-  Copy, Cpu, Gauge, HardDrive, Lock, MemoryStick, Monitor, Power, RefreshCw,
+  Cpu, Gauge, HardDrive, Lock, MemoryStick, Monitor, Power, RefreshCw,
   type LucideIcon,
 } from 'lucide-react';
+import DadosDaMaquina from './DadosDaMaquina';
 import TabelaDaFicha from './TabelaDaFicha';
 import { Aviso } from './ui/aviso';
 import { PontoDeStatus } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { Dado, GradeDeDados } from './ui/dado';
+import { GradeDeDados } from './ui/dado';
 import { cn } from '../helpers/cn.helper';
 import { FUSO_DO_NEGOCIO, formatarDataHora } from '../helpers/format.helper';
-import { caminhoDaMaquina, formatarMemoriaDaPlaca, lerPlacasDeVideo } from '../helpers/maquina.helper';
+import { caminhoDaMaquina } from '../helpers/maquina.helper';
 import { readSnapshot, usagePercent } from '../helpers/metrics.helper';
-import { useCopiar } from '../hooks/useCopiar';
 import { useMaquinaAoVivo, type ComandoDaMaquina } from '../hooks/useMaquinaAoVivo';
 import { usePode } from '../stores/auth.store';
 
@@ -38,11 +38,11 @@ import { usePode } from '../stores/auth.store';
 // A LINHA DA MÁQUINA E DOIS BLOCOS EMBAIXO DELA: o que a máquina é e como está, e
 // os comandos, que agem nela, por último.
 //
-// O NOME DA MÁQUINA É A LINHA QUE ABRE DESCOBERTAS (BZ): é lá que ela se vincula e
-// se desvincula, e aqui ela só se olha e se comanda. Nenhuma etiqueta: as duas telas
-// que o usam já identificaram o equipamento acima dele. O HWID vai com o sistema e a
-// rede, com um botão de copiar — ele não é nome, é o que se cola num chamado e o que se
-// procura no log do agente, e não tem outra tela.
+// O NOME DA MÁQUINA É A LINHA QUE ABRE A FICHA DELA, em Agentes (BZ, DF): é lá que
+// ela se vincula e se desvincula, e aqui ela só se olha e se comanda. Nenhuma
+// etiqueta: as telas que o usam já identificaram o equipamento acima dele. Na própria
+// ficha da máquina, a linha e o inventário saem (`naFichaDaMaquina`): o card de cima
+// já os mostra.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // E ELE FALA HTTP, que é EXCEÇÃO DECLARADA à regra de componente.
@@ -51,7 +51,7 @@ import { usePode } from '../stores/auth.store';
 // hook da página faz a chamada. Aqui o hook é chamado DAQUI, e o motivo é o
 // mesmo do `ReferenceSelect`, a outra exceção: este painel é um widget
 // autocontido — ele tem ciclo de vida próprio (um `refetchInterval` que começa
-// ao montar e para ao desmontar) e é usado por duas telas sem relação entre si.
+// ao montar e para ao desmontar) e é usado por três telas sem relação entre si.
 // Passá-lo por prop obrigaria `useFichaDoComputador` e `usePostos` a escrever a MESMA
 // ligação de seis props, cada um, e a conhecer telemetria sem ter nada a ver com
 // ela. As duas exceções estão nomeadas na regra, lá; a terceira que aparecer sem
@@ -61,6 +61,11 @@ import { usePode } from '../stores/auth.store';
 
 interface TelemetriaDaMaquinaProps {
   endpointId: string;
+  /**
+   * Na ficha da máquina (DF), o card de cima já diz qual é e o que ela diz de si:
+   * aqui ficam só a medida e os comandos.
+   */
+  naFichaDaMaquina?: boolean;
 }
 
 /**
@@ -185,12 +190,11 @@ function Barra({ rotulo, valor, detalhe, online }: { rotulo: string; valor: numb
   );
 }
 
-export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaProps) {
+export default function TelemetriaDaMaquina({ endpointId, naFichaDaMaquina = false }: TelemetriaDaMaquinaProps) {
   const { maquina, carregando, erro, enviando, handleComando } = useMaquinaAoVivo(endpointId);
   // O comando age na máquina de verdade, e é `SUPERVISOR` no servidor (AV). Para
   // quem não é, o bloco some — o botão só levaria 403.
   const podeComandar = usePode('SUPERVISOR');
-  const { copiado, copiar } = useCopiar(maquina?.hwid ?? '', 'Não foi possível copiar o HWID. Selecione e copie à mão.');
 
   if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
 
@@ -205,7 +209,6 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
   if (!maquina) return null;
 
   const amostra = maquina.telemetries[0];
-  const placas = lerPlacasDeVideo(maquina.gpus);
   const leituraAtrasada = !!amostra
     && new Date(maquina.lastSeen).getTime() - new Date(amostra.timestamp).getTime() >= 60_000;
   const online = maquina.status === 'ONLINE';
@@ -220,19 +223,21 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
 
   return (
     <div className="space-y-4">
-      {/* A linha da ficha (`TabelaDaFicha`), como a do computador no posto. Descobertas
-          não tem ficha de máquina: abre a lista Vinculadas já buscada pelo nome. */}
-      <TabelaDaFicha
-        colunas={[{ rotulo: 'Máquina vinculada' }, { rotulo: 'Último contato', className: 'w-48' }]}
-        icone={Monitor}
-        vazio=""
-        linhas={[{
-          id: maquina.id,
-          para: caminhoDaMaquina(maquina.hostname),
-          nome: maquina.hostname,
-          celulas: [formatarDataHora(maquina.lastSeen)],
-        }]}
-      />
+      {/* A linha da ficha (`TabelaDaFicha`), como a do computador no posto: abre a
+          ficha da máquina (DF). */}
+      {!naFichaDaMaquina && (
+        <TabelaDaFicha
+          colunas={[{ rotulo: 'Máquina vinculada' }, { rotulo: 'Último contato', className: 'w-48' }]}
+          icone={Monitor}
+          vazio=""
+          linhas={[{
+            id: maquina.id,
+            para: caminhoDaMaquina(maquina.id),
+            nome: maquina.hostname,
+            celulas: [formatarDataHora(maquina.lastSeen)],
+          }]}
+        />
+      )}
 
       <Card className="overflow-hidden">
         {/* O CABEÇALHO DO BLOCO: o título, de quando é a leitura e o status. */}
@@ -261,41 +266,12 @@ export default function TelemetriaDaMaquina({ endpointId }: TelemetriaDaMaquinaP
             </Aviso>
           )}
 
-          {/* O QUE A MÁQUINA DIZ DE SI, do handshake (CP, DA): como ela se declara,
-              que no computador se confere com o cadastro, e no posto é o único lugar
-              em que aparece. O UUID fica de fora: só a reconciliação o usa. O vazio
-              não aparece (`Dado`). */}
-          <GradeDeDados className="rounded-lg border border-border-sutil bg-surface-muted/30 p-4 md:grid-cols-4">
-            <Dado rotulo="Fabricante">{maquina.manufacturer}</Dado>
-            <Dado rotulo="Modelo">{maquina.hardwareModel}</Dado>
-            <Dado rotulo="Série">{maquina.biosSerial && <span className="font-mono">{maquina.biosSerial}</span>}</Dado>
-            <Dado rotulo="Sistema operacional">{maquina.osVersion}</Dado>
-            <Dado rotulo="Processador">{maquina.cpuModel}</Dado>
-            <Dado rotulo="Endereço IP">{maquina.localIp && <span className="font-mono">{maquina.localIp}</span>}</Dado>
-            <Dado rotulo="Endereço MAC">{maquina.macAddress && <span className="font-mono">{maquina.macAddress}</span>}</Dado>
-            <Dado rotulo={placas.length > 1 ? 'Placas de vídeo' : 'Placa de vídeo'} largo>
-              {placas.length > 0 && (
-                <span className="flex flex-col gap-1">
-                  {placas.map((placa, indice) => (
-                    <span key={`${placa.nome}-${indice}`}>
-                      {placa.nome}
-                      {placa.memoria && <span className="text-text-tertiary"> · {formatarMemoriaDaPlaca(placa.memoria)}</span>}
-                    </span>
-                  ))}
-                </span>
-              )}
-            </Dado>
-            {/* O HWID, com o COPIAR: ele não é nome, é o que se cola num chamado e o
-                que se procura no log do agente. */}
-            <Dado rotulo="HWID" largo>
-              <span className="flex flex-wrap items-center gap-2">
-                <code className="break-all font-mono text-text-primary">{maquina.hwid}</code>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => void copiar()}>
-                  <Copy /> {copiado ? 'Copiado' : 'Copiar'}
-                </Button>
-              </span>
-            </Dado>
-          </GradeDeDados>
+          {/* O que a máquina diz de si. Na ficha da máquina ele está no card de cima. */}
+          {!naFichaDaMaquina && (
+            <GradeDeDados className="rounded-lg border border-border-sutil bg-surface-muted/30 p-4 md:grid-cols-4">
+              <DadosDaMaquina maquina={maquina} />
+            </GradeDeDados>
+          )}
 
           {!amostra ? (
             <p className="rounded-lg border border-dashed border-border-sutil px-4 py-6 text-center text-sm text-text-tertiary">

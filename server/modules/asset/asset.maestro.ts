@@ -15,7 +15,7 @@ export class AssetMaestro {
     server.get('/api/assets', assetController.list);
     server.get('/api/assets/stats', assetController.stats);
     // Lista enxuta para os seletores que escolhem um ativo: a licença entregue
-    // a uma máquina e o vínculo de `/descobertas` (`?maquina=sem`).
+    // a uma máquina e o vínculo de `/agentes` (`?maquina=sem`).
     server.get('/api/assets/options', assetController.options);
 
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,

@@ -6,49 +6,27 @@ import { endpointKeys } from './endpoint.queries';
 // Vincular E ENTREGAR muda a ficha do posto: a chave é do posto, quem pergunta
 // importa (docs/referencia/arquitetura.md).
 import { workstationKeys } from './workstation.queries';
-import type { ListEnvelope } from '../types/list.types';
-import type {
-  Cobertura, ConfiguracaoDaDescoberta, MaquinaDoAtivo, ResultadoDaVarredura, Sugestao,
-} from '../types/reconciliation.types';
+import type { Cobertura, MaquinaDoAtivo } from '../types/reconciliation.types';
 
 // A CONVERGÊNCIA RMM × ITAM (docs/decisoes/reconciliacao.md).
 //
-// `['reconciliation']` é o prefixo, então invalidar depois de resolver uma
-// sugestão alcança a fila E o painel de cobertura — que muda a cada aceite sem
-// ninguém ter tocado nele.
+// `['reconciliation']` é o prefixo, então invalidar depois de vincular alcança o
+// painel de cobertura — que muda a cada vínculo sem ninguém ter tocado nele.
 //
-// E o invalidate vai ALÉM do prefixo, de propósito: aceitar uma sugestão muda o
-// vínculo máquina↔ativo. Quem não invalidasse `assets` e `endpoints` junto
+// E o invalidate vai ALÉM do prefixo, de propósito: o vínculo máquina↔ativo
+// muda as duas pontas. Quem não invalidasse `assets` e `endpoints` junto
 // deixaria a aba Máquina do ativo vazia até alguém recarregar a página.
 
 const reconciliationKeys = {
   all: ['reconciliation'] as const,
-  sugestoes: () => ['reconciliation', 'sugestoes'] as const,
   cobertura: () => ['reconciliation', 'cobertura'] as const,
-  configuracao: () => ['reconciliation', 'configuracao'] as const,
   maquinaDoAtivo: (assetId: string) => ['reconciliation', 'maquina', assetId] as const,
 };
-
-export function useSugestoesQuery() {
-  return useQuery({
-    queryKey: reconciliationKeys.sugestoes(),
-    queryFn: async () => (
-      await apiClient.get<ListEnvelope<Sugestao>>('/reconciliation/suggestions')
-    ).data,
-  });
-}
 
 export function useCoberturaQuery() {
   return useQuery({
     queryKey: reconciliationKeys.cobertura(),
     queryFn: async () => (await apiClient.get<Cobertura>('/reconciliation/coverage')).data,
-  });
-}
-
-export function useConfiguracaoDaDescobertaQuery() {
-  return useQuery({
-    queryKey: reconciliationKeys.configuracao(),
-    queryFn: async () => (await apiClient.get<ConfiguracaoDaDescoberta>('/settings/discovery')).data,
   });
 }
 
@@ -62,61 +40,66 @@ export function useMaquinaDoAtivoQuery(assetId: string | null) {
 }
 
 /**
- * Tudo que a resolução de uma sugestão pode ter mudado. Com as OPÇÕES de
+ * Tudo que vincular, desvincular e excluir podem ter mudado. Com as OPÇÕES de
  * computador: o seletor do vínculo só oferece o computador sem máquina
  * (`?maquina=sem`), e o `staleTime` de um minuto delas seguiria oferecendo o que
  * acabou de ganhar uma.
  */
 function useInvalidarTudo() {
   const queryClient = useQueryClient();
-  return () => Promise.all([
+  return (excluida?: string) => Promise.all([
     queryClient.invalidateQueries({ queryKey: reconciliationKeys.all }),
     queryClient.invalidateQueries({ queryKey: assetKeys.all }),
     queryClient.invalidateQueries({ queryKey: catalogKeys.tabela('assets') }),
-    queryClient.invalidateQueries({ queryKey: endpointKeys.all }),
+    queryClient.invalidateQueries({
+      queryKey: endpointKeys.all,
+      // A máquina excluída não se relê: seria um 404 (`useExcluirMaquina`).
+      predicate: ({ queryKey }) => !excluida || queryKey.join() !== endpointKeys.detalhe(excluida).join(),
+    }),
   ]);
-}
-
-export function useAceitarSugestao() {
-  const invalidar = useInvalidarTudo();
-  return useMutation({
-    mutationFn: async (id: string) =>
-      (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/accept`, {})).data,
-    onSettled: invalidar,
-  });
-}
-
-export function useRecusarSugestao() {
-  const invalidar = useInvalidarTudo();
-  return useMutation({
-    mutationFn: async (id: string) =>
-      (await apiClient.post<Sugestao>(`/reconciliation/suggestions/${id}/reject`)).data,
-    onSettled: invalidar,
-  });
 }
 
 export function useDesvincularMaquina() {
   const invalidar = useInvalidarTudo();
   return useMutation({
     mutationFn: async (endpointId: string) => (await apiClient.delete(`/endpoints/${endpointId}/link`)).data,
-    onSettled: invalidar,
+    onSettled: () => invalidar(),
+  });
+}
+
+/**
+ * EXCLUIR A MÁQUINA — `DELETE /api/endpoints/:id` (DD). O servidor apaga a linha
+ * e a credencial do agente, e fecha a conexão: ela só volta reinstalada. Muda a
+ * cobertura (os Sumidos), por isso invalida tudo.
+ *
+ * A consulta da máquina excluída não revalida: a ficha dela (DF) ainda está na tela
+ * quando a resposta chega, e a releitura seria um 404. A ficha volta para a lista
+ * sem esperar as invalidações: enquanto ela estiver montada, o `refetchInterval`
+ * do detalhe ainda pode disparar.
+ */
+export function useExcluirMaquina() {
+  const invalidar = useInvalidarTudo();
+  return useMutation({
+    mutationFn: async (endpointId: string) => (await apiClient.delete(`/endpoints/${endpointId}`)).data,
+    onSettled: (_resposta, falha, endpointId) => {
+      void invalidar(falha ? undefined : endpointId);
+    },
   });
 }
 
 /**
  * VINCULAR À MÃO — `POST /api/endpoints/:id/link`.
  *
- * A rota já existia e nenhuma tela a chamava: o vínculo só nascia pela
- * fila, e a máquina que a cascata não casava com nada (serial em branco, nome
- * que não bate) ficava em "sem cadastro" sem botão. É a afirmação "esta máquina
- * é aquele patrimônio", dita por gente.
+ * A máquina que a série não ligou sozinha (série da placa, nome que não bate,
+ * computador ainda sem série) se vincula aqui. É a afirmação "esta máquina é
+ * aquele patrimônio", dita por gente, e ela religa o vínculo automático (DC).
  */
 export function useVincularMaquina() {
   const invalidar = useInvalidarTudo();
   return useMutation({
     mutationFn: async ({ endpointId, assetId }: { endpointId: string; assetId: string }) =>
       (await apiClient.post(`/endpoints/${endpointId}/link`, { assetId })).data,
-    onSettled: invalidar,
+    onSettled: () => invalidar(),
   });
 }
 
@@ -141,29 +124,5 @@ export function useVincularEEntregar() {
       endpointId: string; assetId: string; targetWorkstationId: string;
     }) => (await apiClient.post(`/endpoints/${endpointId}/link-and-checkout`, { assetId, targetWorkstationId })).data,
     onSettled: invalidarComPosto,
-  });
-}
-
-/**
- * PROCURAR AGORA — `POST /api/reconciliation/run`.
- *
- * A varredura inteira, fora da janela do job. Invalida tudo o que uma rodada
- * muda: a fila e a cobertura, as máquinas (vínculo automático em `ON`) e os
- * ativos (o carimbo do último contato).
- */
-export function useReconciliarAgora() {
-  const invalidar = useInvalidarTudo();
-  return useMutation({
-    mutationFn: async () => (await apiClient.post<ResultadoDaVarredura>('/reconciliation/run')).data,
-    onSettled: invalidar,
-  });
-}
-
-export function useSalvarConfiguracaoDaDescoberta() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (dados: Partial<ConfiguracaoDaDescoberta>) =>
-      (await apiClient.put<ConfiguracaoDaDescoberta>('/settings/discovery', dados)).data,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: reconciliationKeys.all }),
   });
 }

@@ -1,50 +1,24 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { temCargo } from '../../access/helpers/require-permission';
-import { SEM_PARAMETROS } from '../../../infra/http/sem-parametros';
 import { atorDaRequisicao } from '../../auth/helpers/actor.helper';
 import { idParamSchema } from '../../shared/params.schema';
 import { vinculoComEntregaSchema, vinculoSchema } from '../schemas/reconciliation.schema';
-import { listarSugestoes } from '../use-cases/list-suggestions.usecase';
-import { aceitarSugestao } from '../use-cases/accept-suggestion.usecase';
-import { recusarSugestao } from '../use-cases/reject-suggestion.usecase';
 import { calcularCobertura } from '../use-cases/coverage-stats.usecase';
 import { desvincularEndpoint, vincularEndpointAoAtivo } from '../use-cases/link-endpoint-asset.usecase';
 import { vincularEEntregar } from '../use-cases/link-and-checkout.usecase';
 import { obterMaquinaDoAtivo } from '../use-cases/get-asset-machine.usecase';
-import { reconciliarAgora } from '../use-cases/run-reconciliation.usecase';
 
 // Só HTTP. Sem try/catch: o `parse` rejeita e cai no errorHandler, que devolve
 // 422 com o campo que falhou; o `AppError` dos use-cases sai por lá também.
 export const reconciliationController = {
-  async listSuggestions(request: FastifyRequest) {
-    SEM_PARAMETROS.parse(request.query ?? {});
-    return listarSugestoes();
-  },
-
-  async accept(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
-    return aceitarSugestao(id, atorDaRequisicao(request));
-  },
-
-  async reject(request: FastifyRequest) {
-    const { id } = idParamSchema.parse(request.params);
-    return recusarSugestao(id, atorDaRequisicao(request));
-  },
-
   async coverage(_request: FastifyRequest, reply: FastifyReply) {
     return reply.send(await calcularCobertura());
-  },
-
-  // A VARREDURA AGORA. Mesma função da rodada da hora, sem a janela: devolve o
-  // placar da rodada, e o 409 de "já tem uma rodando" sai pelo errorHandler.
-  async runNow(request: FastifyRequest) {
-    return reconciliarAgora(atorDaRequisicao(request));
   },
 
   async link(request: FastifyRequest, reply: FastifyReply) {
     const { id } = idParamSchema.parse(request.params);
     const { assetId } = vinculoSchema.parse(request.body ?? {});
+    // O autor vem da SESSÃO, nunca do corpo (auth/helpers/actor.helper.ts).
     const vinculado = await vincularEndpointAoAtivo(id, assetId, atorDaRequisicao(request));
     return reply.status(201).send(vinculado);
   },

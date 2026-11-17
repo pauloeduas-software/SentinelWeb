@@ -55,7 +55,7 @@ export default function PostosTable({
                 <TableCell className="hidden md:table-cell">{posto.location.name}</TableCell>
                 <TableCell title={nomesDoPosto(posto).join(', ')}>{quemEstaNoPosto(posto)}</TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {/* Em mono e na cor do texto, com a série embaixo, como a etiqueta em Descobertas (CH). */}
+                  {/* Em mono e na cor do texto, com a série embaixo, como a etiqueta em Agentes (CH). */}
                   {posto.computadores.length > 0
                     ? posto.computadores.map((computador) => (
                       <div key={computador.assetTag}>

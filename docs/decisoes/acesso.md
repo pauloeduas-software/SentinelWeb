@@ -1154,6 +1154,8 @@ saindo uma vez só.
 
 ## CR — Cada máquina tem o seu token, e o segredo único só cadastra
 
+> **Superada em parte por [DD](./reconciliacao.md#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** o `bun run agente:revogar` sai; revogar é excluir a máquina em Agentes, que também fecha a conexão aberta.
+
 > **Supera:** [D149](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token), na parte do agente.
 
 **Decisão.** O agente entra em dois passos, como o Fleet, o osquery, o Elastic Agent, o Tactical RMM e o Wazuh:

@@ -194,8 +194,8 @@ test('Computadores abre com um cartão por tipo de status, e um status novo não
   await expect(page.getByRole('main').getByRole('button', { name: new RegExp(nome) })).toHaveCount(0);
 });
 
-test('Descobertas guarda a busca no endereço, e trocar de aba começa outra lista', async ({ page }) => {
-  await page.goto('/descobertas?aba=sem');
+test('Agentes guarda a busca no endereço, e trocar de vista leva a busca junto', async ({ page }) => {
+  await page.goto('/agentes');
   const busca = page.getByRole('main').getByRole('searchbox');
   await busca.fill('dell');
   await expect(page).toHaveURL(/busca=dell/);
@@ -203,7 +203,14 @@ test('Descobertas guarda a busca no endereço, e trocar de aba começa outra lis
   await page.reload();
   await expect(busca).toHaveValue('dell');
 
-  await page.getByRole('tab', { name: /Vinculadas/ }).click();
-  await expect(page).not.toHaveURL(/busca=/);
-  await expect(busca).toHaveValue('');
+  // A vista é um recorte da mesma lista, como Ativos e Baixados em Computadores.
+  await page.getByRole('main').getByRole('button', { name: /Sem computador/ }).click();
+  await expect(page).toHaveURL(/vista=sem/);
+  await expect(page).toHaveURL(/busca=dell/);
+  await expect(busca).toHaveValue('dell');
+});
+
+test('o endereço antigo de Descobertas leva a Agentes', async ({ page }) => {
+  await page.goto('/descobertas');
+  await expect(page).toHaveURL(/\/agentes$/);
 });

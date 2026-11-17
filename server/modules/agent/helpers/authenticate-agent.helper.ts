@@ -82,3 +82,12 @@ export async function autenticarAgente(authorizationHeader: string | undefined):
     select: { hwid: true },
   });
 }
+
+/**
+ * Se a credencial do HWID ainda existe. A conexão aberta antes de a máquina ser
+ * excluída (DD) passou pelo token na abertura; sem esta conferência no
+ * Handshake, ela recriaria a máquina que acabou de sair.
+ */
+export async function credencialAindaVale(hwid: string): Promise<boolean> {
+  return (await prisma.agentCredential.count({ where: { hwid } })) > 0;
+}

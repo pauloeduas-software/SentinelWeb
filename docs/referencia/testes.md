@@ -64,7 +64,7 @@ configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 | `tests/corridas/` | duas requisições simultâneas, e o placar | o que "passa no teste com um usuário" |
 | `tests/listagens/` | o que cada vista e cada leitura DEVOLVE, e o que ela esconde | filtro que esconde demais não dá erro: some linha e ninguém percebe |
 | `tests/estoque/` | o saldo derivado, a trava da linha do item e as operações do `StockItem`/`StockMovement` | é uma das três pastas POR DOMÍNIO (com `descoberta/` e `licencas/`), e é de propósito: invariante, corrida e operação contam a mesma história sobre as mesmas duas tabelas, e separá-las faria quem investiga um saldo errado abrir três arquivos distantes |
-| `tests/descoberta/` | a borda do agente, a cascata de matching por hardware, a fila, o vínculo manual e o comando — sem inferência por usuário logado ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita ou vincula à mão |
+| `tests/descoberta/` | a borda do agente, o vínculo pela série, o vínculo manual e o comando — sem inferência por usuário logado ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | a segunda pasta por domínio, pelo mesmo motivo: a história é uma só, do handshake até o cadastro que uma pessoa aceita ou vincula à mão |
 | `tests/licencas/` | a conta da licença (compradas, em uso, livres), as entregas e as corridas na trava da licença ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)) | terceira pasta por domínio: contrato e entrega contam a mesma história |
 | `tests/jobs/` | a janela de execução de um job (o D79) | o cenário que ela impede — dois jobs disputando a mesma coluna — não dá erro nenhum: o segundo simplesmente nunca roda |
 
@@ -165,31 +165,30 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
 
 ### `descoberta/` — a única pasta que fala WebSocket
 
-Nove arquivos. A fila de sugestões não infere mais pessoa pela conta do sistema operacional
+Onze arquivos. O vínculo não infere pessoa pela conta do sistema operacional
 ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) —
-o que resta é o vínculo entre máquina e ativo, por evidência de hardware:
+o que resta é o vínculo entre máquina e computador, pela série:
 
-- **`cascata.test.ts` › serial ambíguo ou de fábrica vale ZERO.** "To Be Filled By O.E.M." e
-  qualquer serial repetido em duas máquinas do parque não geram vínculo nenhum — evidência
-  ambígua é evidência zero (D46). É a asserção que, se cair, faz a cascata casar duas máquinas
-  reais com o mesmo ativo.
+- **`vinculo-automatico.test.ts` › a série que não prova nada não liga** ([DC](../decisoes/reconciliacao.md#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha)). A série de
+  fábrica, a repetida em duas máquinas, a de um computador baixado ou que já tem máquina, e o nome
+  não ligam nada, e a linha da lista diz por quê. É a asserção que, se cair, liga uma máquina ao
+  computador errado sem ninguém revisar. O mesmo arquivo prova o vínculo no handshake, assinado pelo
+  sistema, o computador cadastrado ou editado depois da máquina, e o Desvincular que não volta
+  sozinho até alguém vincular à mão.
+- **`excluir-maquina.test.ts` › a máquina excluída não volta sozinha** ([DD](../decisoes/reconciliacao.md#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente)):
+  nem pela conexão aberta, que fecha com 1008, nem pela reconexão, que leva 401, nem pela conexão aberta antes da
+  exclusão que manda o handshake depois. A com computador é 409, e o Técnico, 403.
 - **`vincular-e-entregar.test.ts` › o vínculo manual não é atômico com a entrega, por decisão**
   ([E](../decisoes/reconciliacao.md#e--descobertas-ganha-vínculo-manual-e-reconciliar-agora)).
   Quando a entrega falha (o posto já tem um ativo — invariante 19), o vínculo FICA; a resposta
   diz isso. E desvincular a máquina depois **não libera a vaga** — o ativo continua sendo o da
   mesa, porque a invariante 19 é sobre o ativo, não sobre a máquina vinculada ([B](../decisoes/posse.md#b--invariante-19-na-forma-final-um-ativo-por-posto-de-trabalho)).
-- **`varredura-manual.test.ts` › "Procurar agora" é serializado.** Duas chamadas ao mesmo
-  tempo: uma varre, a outra é 409 — o mesmo guarda que o job de hora em hora usa.
 - **`expurgo-da-telemetria.test.ts` › o expurgo guarda a última amostra de cada máquina**, mesmo
   a de uma máquina desligada há uma semana, e apaga o resto
   ([DA](../decisoes/reconciliacao.md#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai)).
 - **`maquina-e-comando.test.ts` › "máquina não existe" e "agente desconectado" são 404 e 409
   distintos**, e o comando só responde sucesso com o envio confirmado pelo socket — não por
   achar a conexão no mapa ([D](../decisoes/reconciliacao.md#d--a-telemetria-e-o-comando-vão-para-a-ficha-do-ativo-e-a-do-posto)).
-- **`fila.test.ts` e `ciclo-de-vida-da-fila.test.ts`** provam que a mesma sugestão não empilha
-  (invariante 13), que a recusa fica lembrada até surgir evidência nova e que a fila acompanha o
-  mundo: vincular a máquina à mão a outro ativo, dar baixa no computador ou mandá-lo para a
-  lixeira encerra a sugestão como `SUPERSEDED`, e `discoveryMode = OFF` desliga a descoberta. E que o painel de cobertura fecha a conta.
 
 O `maquina-e-comando.test.ts` guarda a regressão mais silenciosa da borda: os bytes de RAM da
 telemetria saem como **string** em `/api/endpoints/:id`. Com `BigInt` cru, o `JSON.stringify` do Fastify morre com
@@ -218,11 +217,10 @@ O teste central passa por cada rota de escrita da tela e confere que **toda** re
 deixou ao menos uma linha em `audit_logs` com o número dela e a conta da sessão (`auditada()`).
 Rota nova de escrita entra nessa lista. O mesmo arquivo prova o resto da [AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco):
 o autor no corpo é 422; uma segunda conta assina o que ela fez; o login grava a entrada como a
-conta e a senha errada sem autor, e o bloqueio uma linha só por janela; a configuração salva num
-banco sem a linha diz só o que a conta mandou; o vínculo repetido não
-grava nada, e o aceite fecha a sugestão junto com o vínculo; `UPDATE` e `DELETE` na tabela são
+conta e a senha errada sem autor, e o bloqueio uma linha só por janela; o vínculo repetido não
+grava nada; `UPDATE` e `DELETE` na tabela são
 recusados pelo banco, e o texto em branco também; o agente
-e o job em `SUGGEST` não mexem em cadastro, posse nem estoque e não gravam; o
+sem série conhecida e o job de hora em hora não mexem em cadastro, posse nem estoque e não gravam; o
 `acesso:administrador` assina como sistema; e senha, hash e chave de licença nunca chegam à
 tabela. `id-da-requisicao.test.ts` prova que o `X-Request-Id` do cliente é ignorado.
 
@@ -258,7 +256,7 @@ entra no event loop como requisição independente e o Prisma tira uma conexão 
 pool para cada. Quem serializa é o Postgres, que é o que se quer provar.
 
 `vinculo.test.ts` é a corrida da máquina: dois vínculos da mesma máquina para ativos diferentes,
-duas desvinculações e dois aceites da mesma sugestão — passa um de cada, e a auditoria tem um
+e duas desvinculações — passa um de cada, e a auditoria tem um
 `LINK` e um `UNLINK` só. Sem a trava da máquina, o segundo vínculo apagava o primeiro sem deixar
 rastro. `login.test.ts` é a rajada de dez senhas erradas na mesma conta: o contador chega a dez, a
 conta trava, e cada linha da auditoria leva o seu número, de 1 a 10. E a de dez tentativas na conta

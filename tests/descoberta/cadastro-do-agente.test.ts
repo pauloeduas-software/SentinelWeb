@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHash } from 'crypto';
 import { prisma } from '../../server/infra/database/prismaClient';
 import { isAgentConnected } from '../../server/modules/agent/agent.registry';
-import { revogarAgente } from '../../server/modules/agent/cli/revogar-agente.cli';
 import { TETO_DA_MENSAGEM_DO_AGENTE } from '../../server/app';
 import { criarApi, type ApiDeTeste } from '../helpers/app';
 import { abrirConexao, cadastrarAgente, conectarAgente, esperarPor } from '../helpers/agente';
@@ -126,35 +125,5 @@ describe('o recadastro', () => {
     expect(novo).not.toBe(antigo);
     await expect(abrirConexao(api, antigo)).rejects.toThrow('HTTP 401');
     (await abrirConexao(api, novo)).close();
-  });
-});
-
-describe('a revogação', () => {
-  it('apaga a credencial, fecha o hub para o token e fica na história da máquina', async () => {
-    const agente = await conectarAgente(api, 'hwid-revogado');
-    await agente.handshake({ Hostname: 'pc-revogado' });
-    const maquina = await esperarPor('a máquina do handshake', () =>
-      prisma.endpoint.findUnique({ where: { hwid: 'hwid-revogado' } }));
-    await agente.fechar();
-
-    expect(await revogarAgente('HWID-Revogado', 'cli:teste')).toBe(true);
-
-    expect(await prisma.agentCredential.findUnique({ where: { hwid: 'hwid-revogado' } })).toBeNull();
-    const linha = await prisma.auditLog.findFirstOrThrow({
-      where: { entityType: 'Endpoint', entityId: maquina.id, action: 'DELETE' },
-    });
-    expect(linha).toMatchObject({ entityLabel: 'pc-revogado', actorType: 'SYSTEM', source: 'cli:teste' });
-  });
-
-  it('o token revogado não abre o hub', async () => {
-    const token = await cadastrarAgente(api, 'hwid-sem-maquina');
-
-    expect(await revogarAgente('hwid-sem-maquina', 'cli:teste')).toBe(true);
-
-    await expect(abrirConexao(api, token)).rejects.toThrow('HTTP 401');
-  });
-
-  it('do que não tem credencial não faz nada', async () => {
-    expect(await revogarAgente('hwid-que-nunca-se-cadastrou', 'cli:teste')).toBe(false);
   });
 });

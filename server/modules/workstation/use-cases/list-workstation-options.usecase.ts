@@ -4,7 +4,7 @@ import { workstationSpec } from '../specs/workstation.spec';
 /**
  * As opções do seletor de posto: as do catálogo, e com `semComputador`, só o
  * posto sem computador entregue agora. É o Entregar do computador e o "E
- * entregar ao posto" de `/descobertas`: o posto que já tem um recusa a entrega
+ * entregar ao posto" de `/agentes`: o posto que já tem um recusa a entrega
  * (um computador por posto, `ativo-do-posto.helper.ts`), então a lista nem
  * oferece. A entrega de estoque e a ocupação pedem sem o recorte.
  */

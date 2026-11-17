@@ -61,7 +61,8 @@ E em **toda** requisição seguinte:
 **Não há segundo fator, SSO nem token de API** ([D148](../decisoes/escopo.md#d148--permissão-vira-cargo-grupo-diretório-sso-e-segundo-fator-saem), [D149](../decisoes/escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token)). O agente fica fora deste fluxo inteiramente, com autenticação própria
 ([CR](../decisoes/acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra)): `POST /agent-hub/enroll` troca o
 `AGENT_ENROLL_SECRET` do `.env` por um token da máquina, e o `/agent-hub` só aceita esse token, preso ao HWID dele.
-Revogar é `bun run agente:revogar <hwid>`.
+Revogar é excluir a máquina em Agentes (`DELETE /api/endpoints/:id`, do Supervisor): a credencial sai e a conexão aberta
+fecha ([DD](../decisoes/reconciliacao.md#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente)).
 
 ---
 
@@ -227,10 +228,10 @@ lista de cargos aceitos por rota. A conta nova nasce `TECNICO`.
 | Ler tudo da operação, e o catálogo (os formulários escolhem categoria, modelo, localização) | ✅ | ✅ | ✅ |
 | Entregar, devolver, ocupar posto, trocar a chave da entrega | ✅ | ✅ | ✅ |
 | Cadastrar e editar computador, item de estoque e colaborador | ✅ | ✅ | ✅ |
-| Vincular máquina, aceitar ou recusar sugestão | ✅ | ✅ | ✅ |
-| Excluir, desativar, lixeira, baixa, encerrar e reabrir licença | — | ✅ | ✅ |
+| Vincular e desvincular máquina | ✅ | ✅ | ✅ |
+| Excluir, desativar, lixeira, baixa, encerrar e reabrir licença, e excluir máquina | — | ✅ | ✅ |
 | Cadastrar e editar posto, licença e o catálogo (Configurações) | — | ✅ | ✅ |
-| Ver o custo, comando remoto, Procurar agora, configurar a descoberta | — | ✅ | ✅ |
+| Ver o custo, comando remoto | — | ✅ | ✅ |
 | Usuários | — | — | ✅ |
 
 **Desativar vai pelo `PUT` da edição** (colaborador e item de estoque), que é do Técnico: o mapa

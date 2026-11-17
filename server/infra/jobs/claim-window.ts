@@ -9,9 +9,8 @@ import { createLogger } from '../logger/logger';
 // O QUE ELA RESOLVE: `setInterval` sozinho não sobrevive a deploy. O
 // `zombie-cleaner.job.ts` reinicia o contador a cada `npm start`, e para um job
 // que roda a cada minuto isso é inofensivo. Para um que roda UMA VEZ POR
-// JANELA (a varredura de reconciliação, de hora em hora), não é: ela roda já no
-// boot, e subir o servidor três vezes na mesma hora varreria o parque três
-// vezes.
+// JANELA (o expurgo da telemetria, uma vez por dia), não é: ele roda já no
+// boot, e subir o servidor três vezes no mesmo dia expurgaria três vezes.
 //
 // A resposta é o banco, não o relógio do processo: antes de executar, o job
 // tenta TOMAR a janela corrente com um `UPDATE` condicional. Um só ganha.
@@ -68,7 +67,7 @@ export async function tomarJanela(nome: string, inicioDaJanela: Date): Promise<b
  * quem desenvolve na máquina local.
  *
  * É a janela do expurgo diário da telemetria (`reconcile.job.ts`). A janela de
- * HORA da reconciliação usa a própria (`inicioDaHora`).
+ * HORA do job que o acorda usa a própria (`inicioDaHora`).
  */
 export function inicioDoDia(): Date {
   const inicio = new Date();

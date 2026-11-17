@@ -1,12 +1,9 @@
 // A MÁQUINA VISTA DE OUTRAS TELAS — a aba Máquina e os links de uma recusa
 // apontam para ela, como `caminhoDoItem` faz com o item de estoque.
 
-/**
- * O endereço de uma máquina vinculada. Descobertas não tem ficha de máquina: é a
- * lista Vinculadas já buscada pelo nome, onde mora o Desvincular.
- */
-export function caminhoDaMaquina(hostname: string): string {
-  return `/descobertas?aba=com&busca=${encodeURIComponent(hostname)}`;
+/** O endereço de uma máquina: a ficha dela em Agentes (DF). */
+export function caminhoDaMaquina(endpointId: string): string {
+  return `/agentes/${endpointId}`;
 }
 
 /** Uma placa de vídeo, já lida do `Gpus` que o agente manda em PascalCase. */

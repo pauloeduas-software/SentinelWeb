@@ -10,7 +10,9 @@ import type { Endpoint } from '../../../types/endpoint.types';
 // posto na mesma ida.
 //
 // O painel repete o sistema e a série, porque a pessoa decide olhando a máquina
-// que vai vincular, e ele cobre a linha dela. Dois campos: o ativo (obrigatório)
+// que vai vincular, e ele cobre a linha dela. O computador já vem escolhido
+// quando a máquina tem dica, a mesma série ou o mesmo nome (DC); quem confirma
+// é a pessoa. Dois campos: o ativo (obrigatório)
 // e o posto (opcional). Com posto, a operação é a de vincular-e-entregar, que o
 // servidor encadeia; sem, é só o vínculo.
 //
@@ -24,7 +26,8 @@ import type { Endpoint } from '../../../types/endpoint.types';
 // precisa aparecer ao lado do campo onde ela escolheu o posto.
 
 interface Props {
-  maquina: Endpoint;
+  /** A linha da lista, ou a ficha da máquina (DF). */
+  maquina: Pick<Endpoint, 'id' | 'hostname' | 'osVersion' | 'biosSerial' | 'dica'>;
   ocupado: boolean;
   onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
   onCancelar: () => void;
@@ -32,7 +35,7 @@ interface Props {
 
 export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCancelar }: Props) {
   const notificar = useNotificacao();
-  const [assetId, setAssetId] = useState('');
+  const [assetId, setAssetId] = useState(maquina.dica?.id ?? '');
   const [workstationId, setWorkstationId] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -44,7 +47,7 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
     try {
       await onVincular(maquina.id, assetId, workstationId || null);
       // Fecha só no sucesso. Na entrega recusada o vínculo fica e a linha some da
-      // lista "Sem vínculo", e o painel continua aberto com a frase que diz isso.
+      // vista Sem computador, e o painel continua aberto com a frase que diz isso.
       onCancelar();
       notificar.sucesso(workstationId ? 'Máquina vinculada e computador entregue.' : 'Máquina vinculada.');
     } catch (falha) {

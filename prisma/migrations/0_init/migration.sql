@@ -34,15 +34,6 @@ CREATE TYPE "StatusLabelType" AS ENUM ('DEPLOYABLE', 'IN_USE', 'PENDING', 'UNDEP
 CREATE TYPE "AssignmentTarget" AS ENUM ('PERSON', 'WORKSTATION');
 
 -- CreateEnum
-CREATE TYPE "DiscoveryMode" AS ENUM ('OFF', 'SUGGEST', 'ON');
-
--- CreateEnum
-CREATE TYPE "MatchSignal" AS ENUM ('SERIAL', 'UUID', 'HOSTNAME');
-
--- CreateEnum
-CREATE TYPE "SuggestionState" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED');
-
--- CreateEnum
 CREATE TYPE "StockTarget" AS ENUM ('PERSON', 'WORKSTATION', 'ASSET');
 
 -- CreateEnum
@@ -64,7 +55,9 @@ CREATE TABLE "endpoints" (
     "manufacturer" TEXT,
     "hardwareModel" TEXT,
     "gpus" JSONB,
+    "agentVersion" TEXT,
     "assetId" UUID,
+    "autoLinkOff" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "endpoints_pkey" PRIMARY KEY ("id")
 );
@@ -250,7 +243,6 @@ CREATE TABLE "assets" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
-    "lastSeenByAgentAt" TIMESTAMP(3),
 
     CONSTRAINT "assets_pkey" PRIMARY KEY ("id")
 );
@@ -305,8 +297,6 @@ CREATE TABLE "app_settings" (
     "assetTagPrefix" TEXT NOT NULL DEFAULT 'ATV-',
     "assetTagZerofill" INTEGER NOT NULL DEFAULT 5,
     "assetTagNext" INTEGER NOT NULL DEFAULT 1,
-    "discoveryMode" "DiscoveryMode" NOT NULL DEFAULT 'SUGGEST',
-    "ghostDays" INTEGER NOT NULL DEFAULT 30,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -361,23 +351,6 @@ CREATE TABLE "license_checkouts" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "license_checkouts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "reconciliation_suggestions" (
-    "id" UUID NOT NULL,
-    "endpointId" UUID NOT NULL,
-    "assetId" UUID,
-    "score" INTEGER NOT NULL,
-    "signal" "MatchSignal",
-    "evidence" JSONB NOT NULL,
-    "evidenceHash" TEXT NOT NULL,
-    "state" "SuggestionState" NOT NULL DEFAULT 'PENDING',
-    "resolvedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "reconciliation_suggestions_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -497,9 +470,6 @@ CREATE INDEX "assets_retiredReasonId_idx" ON "assets"("retiredReasonId");
 CREATE INDEX "assets_retiredAt_idx" ON "assets"("retiredAt");
 
 -- CreateIndex
-CREATE INDEX "assets_lastSeenByAgentAt_idx" ON "assets"("lastSeenByAgentAt");
-
--- CreateIndex
 CREATE INDEX "assignments_assetId_checkinAt_idx" ON "assignments"("assetId", "checkinAt");
 
 -- CreateIndex
@@ -543,15 +513,6 @@ CREATE INDEX "license_checkouts_assignedPersonId_checkinAt_idx" ON "license_chec
 
 -- CreateIndex
 CREATE INDEX "license_checkouts_assignedAssetId_checkinAt_idx" ON "license_checkouts"("assignedAssetId", "checkinAt");
-
--- CreateIndex
-CREATE INDEX "reconciliation_suggestions_state_idx" ON "reconciliation_suggestions"("state");
-
--- CreateIndex
-CREATE INDEX "reconciliation_suggestions_endpointId_state_idx" ON "reconciliation_suggestions"("endpointId", "state");
-
--- CreateIndex
-CREATE INDEX "reconciliation_suggestions_assetId_idx" ON "reconciliation_suggestions"("assetId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "stock_items_name_key" ON "stock_items"("name");
@@ -642,12 +603,6 @@ ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_assignedAssetI
 
 -- AddForeignKey
 ALTER TABLE "license_checkouts" ADD CONSTRAINT "license_checkouts_licenseKeyId_licenseId_fkey" FOREIGN KEY ("licenseKeyId", "licenseId") REFERENCES "license_keys"("id", "licenseId") ON DELETE RESTRICT ON UPDATE RESTRICT;
-
--- AddForeignKey
-ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggestions_endpointId_fkey" FOREIGN KEY ("endpointId") REFERENCES "endpoints"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "reconciliation_suggestions" ADD CONSTRAINT "reconciliation_suggestions_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "assets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "stock_items" ADD CONSTRAINT "stock_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -747,19 +702,6 @@ ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_posto_
 ALTER TABLE "workstation_occupants" ADD CONSTRAINT "workstation_occupants_fim_nao_antecede_inicio" CHECK (
   "endedAt" IS NULL OR "endedAt" >= "startedAt"
 );
-
--- ── INVARIANTE 13: A MESMA SUGESTÃO NÃO EMPILHA NA FILA ───────────────────
---
--- UM alvo só, desde que a fusão de máquinas saiu e com ela o segundo alvo
--- (`mergeIntoEndpointId`) que o COALESCE original cobria. `COALESCE` continua
--- porque em Postgres dois `NULL` nunca colidem num índice único — uma linha
--- `PENDING` com `assetId` nulo voltaria a poder empilhar sem limite.
-CREATE UNIQUE INDEX "sugestao_pendente_por_alvo"
-  ON "reconciliation_suggestions" (
-    "endpointId",
-    COALESCE("assetId", '00000000-0000-0000-0000-000000000000'::uuid)
-  )
-  WHERE "state" = 'PENDING';
 
 -- ── INVARIANTE 5: A FORMA DA POSSE — dois CHECKs ──────────────────────────
 --

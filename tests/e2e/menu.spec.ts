@@ -8,7 +8,7 @@ const PAGINAS = [
   'Postos',
   'Estoque',
   'Licenças',
-  'Descobertas',
+  'Agentes',
   'Colaboradores',
   'Configurações',
   'Usuários',

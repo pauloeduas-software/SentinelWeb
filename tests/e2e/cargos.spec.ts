@@ -9,7 +9,7 @@ import { criarAtivo, criarColaborador, criarItem, criarLicenca, criarPosto, titu
 // A conta nasce pela API, com a sessão do administrador, e entra pela tela como
 // a pessoa entraria: a temporária, e a senha dela no primeiro acesso (AU).
 
-const OPERACAO = ['Computadores', 'Postos', 'Estoque', 'Licenças', 'Descobertas', 'Colaboradores'];
+const OPERACAO = ['Computadores', 'Postos', 'Estoque', 'Licenças', 'Agentes', 'Colaboradores'];
 
 async function entrarComo(browser: Browser, request: APIRequestContext, role: 'TECNICO' | 'SUPERVISOR') {
   const email = `${role.toLowerCase()}.${Date.now()}@teste.local`;

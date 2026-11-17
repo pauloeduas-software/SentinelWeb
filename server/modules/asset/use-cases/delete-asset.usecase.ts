@@ -9,7 +9,6 @@ import {
 } from '../../license/use-cases/count-license-checkouts.usecase';
 import { componentesDoAtivo } from '../../stock/use-cases/count-person-stock.usecase';
 import { assertSemMaquina } from '../../reconciliation/use-cases/get-asset-machine.usecase';
-import { encerrarSugestoesDoAtivo } from '../../reconciliation/use-cases/invalidate-suggestions.usecase';
 import { assertSemPosse } from './assert-sem-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
@@ -79,13 +78,10 @@ export async function deleteAsset(id: string, ator: Ator): Promise<void> {
 
     // E a MÁQUINA (CL): ela sumiria da tela junto com o computador e seguiria
     // vinculada a ele, mandando telemetria e recebendo comando. A recusa leva a
-    // Descobertas, onde mora o Desvincular.
+    // Agentes, onde mora o Desvincular.
     await assertSemMaquina(tx, id, 'Este computador', 'excluir');
 
     await tx.asset.update({ where: { id }, data: { deletedAt: new Date() } });
-
-    // As sugestões de vínculo dele saem da fila junto (CL): na lixeira, ele não é encontrado.
-    await encerrarSugestoesDoAtivo(tx, id);
 
     await recordAudit(tx, {
       entityType: 'Asset',

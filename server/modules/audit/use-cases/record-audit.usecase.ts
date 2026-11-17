@@ -39,8 +39,7 @@ const logger = createLogger('auditoria');
 //
 // `LOGIN`, `LOGOUT` e `LOGIN_FAILED` são a entrada e a saída de uma conta; a
 // falha leva o motivo ('senha', 'bloqueada', 'desativada'). `COMMAND` é a ordem
-// mandada à máquina (desligar, reiniciar). `RUN` é a reconciliação pedida pela
-// tela, e `REJECT` a sugestão de vínculo recusada. `REINSTALL` é a máquina
+// mandada à máquina (desligar, reiniciar). `REINSTALL` é a máquina
 // reinstalada que herdou a própria linha com o HWID novo (CV), gravada pelo sistema.
 //
 // A UNIÃO LISTA O QUE O SISTEMA GRAVA, e nada além. A coluna é `String` no
@@ -51,7 +50,7 @@ type AuditAction =
   | 'CHECKOUT' | 'CHECKIN' | 'RETIRE' | 'UNRETIRE'
   | 'LINK' | 'UNLINK'
   | 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED'
-  | 'COMMAND' | 'RUN' | 'REJECT' | 'REINSTALL';
+  | 'COMMAND' | 'REINSTALL';
 
 interface RecordAuditInput {
   entityType: string;

@@ -78,7 +78,7 @@ describe('invariante 20 — o computador com máquina vinculada não sai', () =>
     });
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toBe(
-      `${ativo.assetTag} ainda tem a máquina PC-DA-BAIXA vinculada. Desvincule pela tela de Descobertas antes de dar baixa.`,
+      `${ativo.assetTag} ainda tem a máquina PC-DA-BAIXA vinculada. Desvincule na tela Agentes antes de dar baixa.`,
     );
     expect(recusa.body.refs).toEqual([{ tipo: 'maquina', id: maquina.id, nome: 'PC-DA-BAIXA' }]);
 
@@ -92,7 +92,7 @@ describe('invariante 20 — o computador com máquina vinculada não sai', () =>
     const recusa = await api.delete<{ error: string; refs: unknown[] }>(`/api/assets/${ativo.id}`);
     expect(recusa.status).toBe(409);
     expect(recusa.body.error).toBe(
-      'Este computador ainda tem a máquina PC-DA-LIXEIRA vinculada. Desvincule pela tela de Descobertas antes de excluir.',
+      'Este computador ainda tem a máquina PC-DA-LIXEIRA vinculada. Desvincule na tela Agentes antes de excluir.',
     );
     expect(recusa.body.refs).toEqual([{ tipo: 'maquina', id: maquina.id, nome: 'PC-DA-LIXEIRA' }]);
     expect((await prisma.endpoint.findUniqueOrThrow({ where: { id: maquina.id } })).assetId).toBe(ativo.id);

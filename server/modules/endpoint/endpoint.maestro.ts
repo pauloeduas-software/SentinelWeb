@@ -13,6 +13,7 @@ export class EndpointMaestro {
     // ficha do ativo e a do posto, onde a pergunta é sobre uma só.
     server.get('/api/endpoints/:id', endpointController.detail);
     server.post('/api/endpoints/:id/command', DESTRUCTIVE_RATE_LIMIT, endpointController.command);
+    server.delete('/api/endpoints/:id', DESTRUCTIVE_RATE_LIMIT, endpointController.remove);
 
     logger.debug('[Maestro] Rotas de Endpoints (RMM) inicializadas.');
   }

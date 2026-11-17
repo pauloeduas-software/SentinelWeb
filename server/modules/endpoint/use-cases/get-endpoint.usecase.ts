@@ -3,6 +3,8 @@ import { AppError } from '../../../infra/errors/app-error';
 import {
   MAQUINA_DA_FICHA_SELECT, presentMaquinaDaFicha, type MaquinaDaFichaApresentada,
 } from '../helpers/present-endpoint.helper';
+import { dicaEAviso, type DicaEAviso } from './list-endpoints.usecase';
+import { lerParque } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 
 /**
  * UMA máquina, com a amostra de telemetria mais recente.
@@ -25,12 +27,12 @@ import {
  * Com um pai, o limite desce para o SQL — é o caso desta consulta, e é por isso
  * que ela é barata.
  *
- * A listagem FICA, e não é redundante: é dela que `/descobertas` tira as máquinas
+ * A listagem FICA, e não é redundante: é dela que `/agentes` tira as máquinas
  * sem cadastro. Ela responde "o que o agente vê que o cadastro não sabe"; esta
  * responde "como está esta máquina".
  * ═══════════════════════════════════════════════════════════════════════════
  */
-export async function getEndpoint(id: string): Promise<MaquinaDaFichaApresentada> {
+export async function getEndpoint(id: string): Promise<MaquinaDaFichaApresentada & DicaEAviso> {
   const endpoint = await prisma.endpoint.findUnique({
     where: { id },
     select: MAQUINA_DA_FICHA_SELECT,
@@ -41,5 +43,9 @@ export async function getEndpoint(id: string): Promise<MaquinaDaFichaApresentada
   // comando ter deixado de usar 404 para os dois casos (ver send-command).
   if (!endpoint) throw new AppError('Máquina não encontrada.', 404);
 
-  return presentMaquinaDaFicha(endpoint);
+  // A dica e o aviso são da ficha da máquina sem computador (DF), como na linha da
+  // lista. Com computador, o parque nem é lido.
+  const { autoLinkOff, ...maquina } = endpoint;
+  const semComputador = maquina.asset ? { dica: null, aviso: null } : dicaEAviso({ ...maquina, autoLinkOff }, await lerParque());
+  return { ...presentMaquinaDaFicha(maquina), ...semComputador };
 }

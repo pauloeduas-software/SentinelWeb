@@ -82,7 +82,7 @@ export function useFichaDoComputador() {
   } = useAssetComponentsQuery(id ?? null);
 
   // A MÁQUINA: qual está vinculada. O resto quem lê é o painel da aba, e o vínculo
-  // mora em Descobertas (BZ).
+  // mora em Agentes (BZ).
   const { data: maquina, isPending: maquinaPendente, error: erroDaMaquina } = useMaquinaDoAtivoQuery(id ?? null);
 
   const fecharModal = () => setModal('nenhum');

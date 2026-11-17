@@ -12,7 +12,6 @@ import {
   addOccupantSchema, endOccupancySchema, updateOccupantShiftSchema,
 } from '../../occupancy/schemas/occupancy.schema';
 import { vinculoComEntregaSchema, vinculoSchema } from '../../reconciliation/schemas/reconciliation.schema';
-import { configuracaoDaDescobertaSchema } from '../../settings/schemas/settings.schema';
 import {
   checkinStockSchema, checkoutStockSchema, createStockItemSchema, updateStockItemSchema,
 } from '../../stock/schemas/stock.schema';
@@ -31,7 +30,7 @@ import { createWorkstationSchema, updateWorkstationSchema } from '../../workstat
 
 export type Tag =
   | 'Sessão' | 'Usuários' | 'Computadores' | 'Postos' | 'Estoque' | 'Licenças'
-  | 'Descobertas' | 'Colaboradores' | 'Configurações';
+  | 'Agentes' | 'Colaboradores' | 'Configurações';
 
 export interface ContratoDaRota {
   tag: Tag;
@@ -119,18 +118,15 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'POST /api/licenses/checkouts/:id/checkin': { tag: 'Licenças', resumo: 'Devolve uma entrega de licença', body: checkinLicenseSchema },
   'PATCH /api/licenses/checkouts/:id': { tag: 'Licenças', resumo: 'Troca a chave de uma entrega', body: checkoutKeySchema },
 
-  // ── Descobertas ───────────────────────────────────────────────────────
-  'GET /api/endpoints': { tag: 'Descobertas', resumo: 'As máquinas que o agente descobriu', query: 'lista' },
-  'GET /api/endpoints/:id': { tag: 'Descobertas', resumo: 'A máquina descoberta' },
-  'POST /api/endpoints/:id/command': { tag: 'Descobertas', resumo: 'Manda um comando à máquina (desligar, reiniciar)', body: sendCommandSchema },
-  'POST /api/endpoints/:id/link': { tag: 'Descobertas', resumo: 'Vincula a máquina a um computador', body: vinculoSchema, status: 201 },
-  'DELETE /api/endpoints/:id/link': { tag: 'Descobertas', resumo: 'Desfaz o vínculo' },
-  'POST /api/endpoints/:id/link-and-checkout': { tag: 'Descobertas', resumo: 'Vincula e entrega ao posto', body: vinculoComEntregaSchema, status: 201 },
-  'GET /api/reconciliation/suggestions': { tag: 'Descobertas', resumo: 'A fila de sugestões de vínculo' },
-  'GET /api/reconciliation/coverage': { tag: 'Descobertas', resumo: 'A cobertura: quanto do inventário o agente enxerga' },
-  'POST /api/reconciliation/run': { tag: 'Descobertas', resumo: 'Procura agora as máquinas sem vínculo' },
-  'POST /api/reconciliation/suggestions/:id/accept': { tag: 'Descobertas', resumo: 'Aceita a sugestão' },
-  'POST /api/reconciliation/suggestions/:id/reject': { tag: 'Descobertas', resumo: 'Recusa a sugestão' },
+  // ── Agentes ──────────────────────────────────────────────────────────
+  'GET /api/endpoints': { tag: 'Agentes', resumo: 'As máquinas que o agente descobriu (?vista=com|sem|sumidos)', query: 'lista' },
+  'GET /api/endpoints/:id': { tag: 'Agentes', resumo: 'A máquina descoberta' },
+  'POST /api/endpoints/:id/command': { tag: 'Agentes', resumo: 'Manda um comando à máquina (desligar, reiniciar)', body: sendCommandSchema },
+  'DELETE /api/endpoints/:id': { tag: 'Agentes', resumo: 'Exclui a máquina e revoga o token do agente dela' },
+  'POST /api/endpoints/:id/link': { tag: 'Agentes', resumo: 'Vincula a máquina a um computador', body: vinculoSchema, status: 201 },
+  'DELETE /api/endpoints/:id/link': { tag: 'Agentes', resumo: 'Desfaz o vínculo' },
+  'POST /api/endpoints/:id/link-and-checkout': { tag: 'Agentes', resumo: 'Vincula e entrega ao posto', body: vinculoComEntregaSchema, status: 201 },
+  'GET /api/reconciliation/coverage': { tag: 'Agentes', resumo: 'A cobertura: quanto do inventário o agente enxerga' },
 
   // ── Colaboradores ─────────────────────────────────────────────────────
   'GET /api/people/:id': { tag: 'Colaboradores', resumo: 'A ficha do colaborador' },
@@ -138,8 +134,6 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'GET /api/people/:id/occupancies': { tag: 'Colaboradores', resumo: 'Os postos pelos quais o colaborador responde' },
 
   // ── Configurações ─────────────────────────────────────────────────────
-  'GET /api/settings/discovery': { tag: 'Configurações', resumo: 'A configuração da descoberta' },
-  'PUT /api/settings/discovery': { tag: 'Configurações', resumo: 'Salva a configuração da descoberta', body: configuracaoDaDescobertaSchema },
   'GET /api/settings/next-asset-tag': { tag: 'Configurações', resumo: 'A próxima etiqueta de computador' },
 
   // As tabelas de catálogo (categorias, status, motivos de baixa, fabricantes, modelos,

@@ -62,6 +62,7 @@ export function toHandshakeData(message: ParsedAgentMessage): HandshakeData {
     manufacturer: readString(payload, 'Manufacturer'),
     hardwareModel: readString(payload, 'HardwareModel'),
     gpus: toGpus(payload),
+    agentVersion: readString(payload, 'AgentVersion'),
   };
 }
 

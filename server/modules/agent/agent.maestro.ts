@@ -3,7 +3,7 @@ import { parseAgentMessage } from './helpers/parse-agent-message.helper';
 import { registerAgent, unregisterAgent } from './agent.registry';
 import { handleAgentMessage } from './use-cases/handle-agent-message.usecase';
 import { markEndpointOffline } from '../endpoint/use-cases/mark-endpoint-offline.usecase';
-import { autenticarAgente } from './helpers/authenticate-agent.helper';
+import { autenticarAgente, credencialAindaVale } from './helpers/authenticate-agent.helper';
 import { agentController } from './controllers/agent.controller';
 import { shortHwid } from '../endpoint/helpers/hwid.helper';
 import { createLogger } from '../../infra/logger/logger';
@@ -75,8 +75,15 @@ export class AgentMaestro {
         }
 
         // O Handshake é o que vincula ESTA conexão ao HWID: é ele que habilita
-        // o envio de comandos para a máquina.
-        if (message.type === 'Handshake') registerAgent(hwid, socket);
+        // o envio de comandos para a máquina. A credencial se confere de novo
+        // aqui porque a máquina pode ter sido excluída depois da abertura (DD).
+        if (message.type === 'Handshake') {
+          if (!(await credencialAindaVale(hwid))) {
+            socket.close(1008, 'Máquina excluída');
+            return;
+          }
+          registerAgent(hwid, socket);
+        }
 
         try {
           await handleAgentMessage(message);

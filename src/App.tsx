@@ -10,7 +10,8 @@ import EstoquePage from './pages/estoque';
 import ItemFichaPage from './pages/estoque/ficha';
 import LicencasPage from './pages/licencas';
 import LicencaFichaPage from './pages/licencas/ficha';
-import DescobertasPage from './pages/descobertas';
+import AgentesPage from './pages/agentes';
+import MaquinaFichaPage from './pages/agentes/ficha';
 import UsuariosPage from './pages/usuarios';
 import ConfiguracoesPage from './pages/configuracoes';
 import ColaboradoresPage from './pages/colaboradores';
@@ -156,11 +157,14 @@ function Layout() {
               <Route path="/estoque/:id" element={<ItemFichaPage />} />
               <Route path="/licencas" element={<LinkAntigoDoDetalhe parametro="licenca" caminho={caminhoDaLicenca}><LicencasPage /></LinkAntigoDoDetalhe>} />
               <Route path="/licencas/:id" element={<LicencaFichaPage />} />
-              {/* O QUE O AGENTE VÊ E O CADASTRO NÃO SABE. A rota leva o nome
-                  do que a tela LISTA — descobertas —, e não o do processo que roda
-                  por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi,
-                  nomear a tela pelo assunto em vez de pelo conteúdo. */}
-              <Route path="/descobertas" element={<DescobertasPage />} />
+              {/* AS MÁQUINAS COM AGENTE e qual computador cada uma é. A rota leva o
+                  nome do que a tela LISTA — agentes —, e não o do processo que roda
+                  por trás: `/reconciliacao` seria o mesmo erro que `/itam` foi.
+                  `/descobertas` era o nome antigo (DC). */}
+              <Route path="/agentes" element={<AgentesPage />} />
+              {/* A FICHA DA MÁQUINA (DF): o card, o computador que ela é e como ela está. */}
+              <Route path="/agentes/:id" element={<MaquinaFichaPage />} />
+              <Route path="/descobertas" element={<Navigate to="/agentes" replace />} />
               {/* QUEM OPERA O SISTEMA é assunto do Administrador: quem não é nem
                   vê o item no menu (navegacao.ts), e a URL digitada volta para a
                   raiz (AV). `/users` era o nome antigo. */}

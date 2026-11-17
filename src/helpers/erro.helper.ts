@@ -8,13 +8,12 @@ import { caminhoDaMaquina } from './maquina.helper';
 // (`src/types/erro.types.ts`), como links para a tela de cada uma. O
 // erro da API guarda o corpo como veio (`corpo`); a leitura dele mora aqui.
 
-// A máquina não tem ficha, e o caminho dela é o nome: cada um recebe a referência inteira.
 const CAMINHO: Record<ReferenciaDoErro['tipo'], (ref: ReferenciaDoErro) => string> = {
   ativo: ({ id }) => `/computadores/${id}`,
   licenca: ({ id }) => caminhoDaLicenca(id),
   estoque: ({ id }) => caminhoDoItem(id),
   posto: ({ id }) => `/postos/${id}`,
-  maquina: ({ nome }) => caminhoDaMaquina(nome),
+  maquina: ({ id }) => caminhoDaMaquina(id),
 };
 
 /** Só o 404 diz que o registro não existe: um 500 ou a rede caída dizem que não deu para abrir. */

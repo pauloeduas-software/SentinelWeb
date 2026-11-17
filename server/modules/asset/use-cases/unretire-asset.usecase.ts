@@ -5,6 +5,7 @@ import type { Ator } from '../../audit/audit.types';
 import { buildChanges } from '../../shared/diff.helper';
 import { ASSET_WRITE_SELECT, comMotivoPorEscrito } from '../helpers/asset-select.helper';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
+import { vincularMaquinaDoComputador } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 
 /**
  * DESFAZER a baixa — a venda não saiu, o equipamento "roubado"
@@ -24,7 +25,7 @@ import { travarAtivoOuFalhar } from './lock-asset.usecase';
  * inventário perderia o rastro de quem está com o equipamento.
  */
 export async function unretireAsset(id: string, ator: Ator) {
-  return prisma.$transaction(async (tx) => {
+  const salvo = await prisma.$transaction(async (tx) => {
     // A trava ANTES de ler, a mesma da baixa: sem ela, um duplo clique gravava
     // dois UNRETIRE, e uma reversão atrasada podia apagar uma baixa NOVA feita
     // no meio — com o histórico dizendo de onde ele voltou errado.
@@ -59,4 +60,9 @@ export async function unretireAsset(id: string, ator: Ator) {
 
     return depois;
   });
+
+  // O computador vivo com série procura a máquina que chegou antes dele (DC).
+  // Depois da transação: o vínculo trava a máquina e o ativo de novo, em outra.
+  await vincularMaquinaDoComputador(id);
+  return salvo;
 }

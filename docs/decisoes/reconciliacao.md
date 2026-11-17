@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB da segunda rodada (ver
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB/DC/DD/DE/DF da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 
 ---
@@ -146,6 +146,8 @@ novo (`hwid` muda) e o histórico de "um agente já viu este ativo" não pode ze
 
 ## D51 — Auto-provisionamento nasce em `SUGGEST`
 
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o modo sai; a série única liga a máquina sozinha, sempre, e nada cria computador.
+
 **Decidido:** `discoveryMode` com `OFF | SUGGEST | ON`, default **SUGGEST**.
 
 **Por quê:** em `ON`, a primeira VM de teste que alguém subir vira patrimônio — e **consome
@@ -162,6 +164,10 @@ linha a mais: é a sequência de etiquetas furada para sempre.
 ---
 
 ## D95 — Quem carimba o ativo é o **job**, não o handshake
+
+> **Superada por [DD](#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** o carimbo sai com a coluna `lastSeenByAgentAt`; os Sumidos contam as máquinas.
+
+> **Superada em parte por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o job continua carimbando o último contato, mas não reconcilia mais; o vínculo é decidido no handshake.
 
 **Decidido:** `Asset.lastSeenByAgentAt` é propagado pelo `reconcile.job.ts`, num único
 `UPDATE … FROM` que cobre a frota inteira. O `touchEndpoint` continua tocando
@@ -183,6 +189,8 @@ igual — e é por isso que a propagação por job não é um atalho, é o desen
 ---
 
 ## D96 — **Uma** tabela de sugestão, com discriminante
+
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a fila de sugestões sai.
 
 > **Superada em parte por [CZ](#cz--a-fila-de-sugestões-perde-o-kind-e-a-resposta-o-que-a-tela-não-lê):** o `kind` sai; a fila só propõe vínculo.
 
@@ -206,6 +214,8 @@ da `Assignment`. Se a fila crescer para além de uma tela, vira CHECK na migrati
 ---
 
 ## D97 — A recusa tem memória, e a memória tem chave
+
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** sem fila não há recusa; a memória do "não" é o `autoLinkOff` que o Desvincular liga.
 
 **Decidido:** a sugestão guarda `evidenceHash` (sha256 da evidência normalizada). O job não
 reoferece um par cujo `REJECTED` mais recente tenha o **mesmo** hash; com hash diferente,
@@ -408,6 +418,8 @@ protege contra ele **destruir**. São coisas diferentes e as duas eram necessár
 
 ## D107 — O aceite **age e depois fecha**, e a ordem erra para o lado certo
 
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o aceite sai com a fila.
+
 **Decidido:** `aceitarSugestao` executa a ação (que abre a própria transação) e só então
 marca a sugestão como `ACCEPTED`, em duas operações separadas.
 **Descartado:** as duas na mesma transação.
@@ -448,6 +460,8 @@ fusão inteira na metade. E consolidar não é só evitar o erro: `firstSeenAt` 
 
 ## D109 — O hash é da **afirmação**, não da evidência
 
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o hash da sugestão sai com a fila.
+
 **Decidido:** `ReconciliationSuggestion.evidenceHash` guarda o sha256 de uma
 **afirmação** — o subconjunto que identifica o que a sugestão diz —, e não da
 evidência inteira. `proporSugestao` recebe os dois campos separados, e a
@@ -481,6 +495,8 @@ Memória se consulta pela chave que a define.
 ---
 
 ## D110 — A fila tem **três** portas de saída, e a terceira é o mundo
+
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a fila sai, e com ela o encerramento das obsoletas e o expurgo das substituídas.
 
 **Decidido:** `encerrarSugestoesObsoletas()` roda no começo de cada rodada do job
 e marca `SUPERSEDED` toda sugestão pendente que deixou de descrever o mundo. O
@@ -540,6 +556,8 @@ propriedade legível no próprio SQL em vez de depender de quando o job acordou.
 ---
 
 ## D112 — `discoveryMode = OFF` desliga a descoberta
+
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o `discoveryMode` sai.
 
 **Decidido:** em `OFF`, `reconciliarEndpoint` desiste antes da cascata: não nasce
 `LINK` nem `MERGE`, e não há vínculo automático. Posse e posto compartilhado
@@ -703,6 +721,8 @@ runtime, cada driver, cada atualização), e em ordem alfabética as primeiras c
 
 ## D118 — A configuração da descoberta ganha tela, e a allowlist com ela
 
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o painel Configurar sai; os Sumidos contam 30 dias fixos.
+
 > **Superada em parte por [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos):** o `shadowHours` sai com a triagem; ficam o modo e o `ghostDays`.
 
 **Decidido:** o painel de `/descobertas` ganha os cinco controles — modo, `ghostDays`,
@@ -749,6 +769,8 @@ mentindo que a mudança pegou.
 
 ## D120 — `proporSugestao` não recebe cliente, porque abre transação
 
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o `proporSugestao` sai com a fila.
+
 **Decidido:** a função perde o parâmetro `client` e usa o `prisma` global.
 **Descartado:** manter o `Pick<typeof prisma, 'reconciliationSuggestion'>`, que aceitava um
 `tx`.
@@ -768,6 +790,8 @@ dentro de uma. Parâmetro removido em vez de tipo alargado: um `client` que só 
 
 ## D121 — Casar a conta busca os **candidatos**, não o cadastro inteiro
 
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a sugestão sai com a fila.
+
 **Decidido:** `registrarUsuarioObservado` filtra no banco por `username` igual ou parte local
 de e-mail igual, e entrega esse recorte ao `casarPessoa`.
 **Descartado:** `findMany` sem `where`, que era o que estava lá.
@@ -786,6 +810,8 @@ e um filtro de desempenho teria mudado o resultado.
 ---
 
 ## D122 — `Asset.suggestions`, e não o nome que o `prisma format` escreveu
+
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a relação sai com a tabela de sugestões.
 
 **Decidido:** o campo de relação em `Asset` chama `suggestions`.
 **Descartado:** `ReconciliationSuggestion ReconciliationSuggestion[]`, que o gerador escreveu
@@ -916,6 +942,8 @@ recebeu o ativo entre o carregar da tela e o clique.
 
 ## E — `/descobertas` ganha vínculo manual e "Reconciliar agora"
 
+> **Superada em parte por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** o Procurar agora e a rota `POST /api/reconciliation/run` saem; o vínculo à mão e o vincular e entregar ficam, em `/agentes`.
+
 > **Superada em parte por [BF](./plataforma.md#bf--a-resposta-a-um-clique-vai-para-o-cartão-do-canto-inferior-direito):** o placar da rodada vai para o cartão, como toda resposta a um clique.
 
 **Decidido:** `/descobertas` passa a mostrar as máquinas **sem vínculo** e as **vinculadas**
@@ -979,6 +1007,10 @@ junto com o bloco. Reavaliar quando o agente, Colaboradores e Computadores forem
 ---
 
 ## BZ — Vincular e desvincular moram em Descobertas
+
+> **Superada em parte por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a tela se chama Agentes, e o vínculo mora na lista única dela.
+
+> **Superada em parte por [DF](#df--a-máquina-tem-ficha-em-agentes):** a máquina tem ficha, e a linha da aba Máquina abre a ficha dela.
 
 **Decidido** (2026-11-07, olhando o card Máquina vinculada na ficha do computador):
 
@@ -1136,6 +1168,8 @@ serial de produto deixa de não ter identidade.
 
 ## CW — Descobertas perde a triagem, os Ociosos e os números repetidos
 
+> **Superada em parte por [DD](#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** os Sumidos contam as máquinas, e não os computadores.
+
 > **Superada em parte por [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai):** a série, o fabricante e o modelo voltam para a aba Máquina, com as placas de vídeo.
 
 > **Supera:** [D111](#d111--a-janela-da-agregação-corta-na-meia-noite-não-em-há-n24-horas) (a agregação do uso diário)
@@ -1176,6 +1210,8 @@ serial de produto deixa de não ter identidade.
 ---
 
 ## CX — Os nomes de Descobertas
+
+> **Superada em parte por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a tela se chama Agentes, e o Procurar agora saiu.
 
 **Decisão.** Os textos da tela passam para o vocabulário do sistema:
 
@@ -1229,6 +1265,8 @@ Status. E desde a A20 o `BiosSerial` pode vir do serial da placa, então "da BIO
 ---
 
 ## CZ — A fila de sugestões perde o `kind`, e a resposta, o que a tela não lê
+
+> **Superada por [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha):** a fila sai inteira.
 
 > **Supera em parte:** [D96](#d96--uma-tabela-de-sugestão-com-discriminante) (o discriminante).
 
@@ -1321,3 +1359,171 @@ instalados, que pedem uma lista própria. Voltam só com a tela que os leia.
 e a A24 de lá tirou do handshake os programas instalados e a RAM. Os dois quadros mostravam zero e "A leitura não trouxe
 processos." em toda máquina, e o teste provava um caso que o agente não produz mais. É o critério da CY: o servidor lê o
 que o agente manda, e só isso.
+
+---
+
+## DC — Descobertas vira Agentes, e a série liga a máquina sozinha
+
+> **Superada em parte por [DD](#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** Agentes ganha a vista Sumidos, e a máquina sem computador ganha o Excluir.
+
+> **Supera:** [D51](#d51--auto-provisionamento-nasce-em-suggest) e [D112](#d112--discoverymode--off-desliga-a-descoberta)
+> (o modo), [D96](#d96--uma-tabela-de-sugestão-com-discriminante), [D97](#d97--a-recusa-tem-memória-e-a-memória-tem-chave),
+> [D107](#d107--o-aceite-age-e-depois-fecha-e-a-ordem-erra-para-o-lado-certo),
+> [D109](#d109--o-hash-é-da-afirmação-não-da-evidência), [D110](#d110--a-fila-tem-três-portas-de-saída-e-a-terceira-é-o-mundo),
+> [D120](#d120--proporsugestao-não-recebe-cliente-porque-abre-transação),
+> [D121](#d121--casar-a-conta-busca-os-candidatos-não-o-cadastro-inteiro),
+> [D122](#d122--assetsuggestions-e-não-o-nome-que-o-prisma-format-escreveu) e
+> [CZ](#cz--a-fila-de-sugestões-perde-o-kind-e-a-resposta-o-que-a-tela-não-lê) (a fila);
+> [D118](#d118--a-configuração-da-descoberta-ganha-tela-e-a-allowlist-com-ela) (o Configurar);
+> [E](#e--descobertas-ganha-vínculo-manual-e-reconciliar-agora) (em parte: o Procurar agora);
+> [D95](#d95--quem-carimba-o-ativo-é-o-job-não-o-handshake) (em parte: o job que reconcilia);
+> [BZ](#bz--vincular-e-desvincular-moram-em-descobertas) e [CX](#cx--os-nomes-de-descobertas) (em parte: o nome da tela).
+
+**Decisão** (2026-11-16, comparando a tela com o GLPI, o OCS, o Fleet, o iTop, o Snipe-IT, o ServiceNow, o Lansweeper,
+o NinjaOne, o Freshservice, o Intune e o Jamf):
+
+- **A série liga a máquina ao computador sozinha, na hora.** A máquina sem computador cuja série é igual à de **um**
+  computador vivo (fora da lixeira e sem baixa) e sem máquina é ligada a ele no handshake. O computador salvo com
+  série (cadastro, edição, restaurar da lixeira, reverter a baixa) procura a máquina que chegou antes dele. A
+  auditoria grava o `LINK` como o sistema (`vinculo-automatico`), com o sinal `SERIAL`. É a regra 14 de importação do
+  GLPI ("update by serial") contra o computador cadastrado.
+- **Não liga:**
+  - a série de fábrica e a série repetida em outra máquina ([D46](#d46--evidência-ambígua-é-evidência-zero), [CT](#ct--o-lixo-de-fábrica-se-reconhece-sem-separadores-e-a-lista-cresce));
+  - a série de um computador baixado, ou de um que já tem outra máquina;
+  - o UUID, que o computador não guarda: ele reconhece a máquina reinstalada ([CV](#cv--a-máquina-reinstalada-herda-a-própria-linha-como-no-glpi));
+  - o nome, que é renomeável e se repete.
+- **O Desvincular desliga o automático da máquina** (`endpoints.autoLinkOff`). Sem isso, o handshake seguinte a ligaria
+  ao mesmo computador, e o vínculo errado não teria correção. O vínculo à mão o religa.
+- **Saem a fila e o modo:** a tabela `reconciliation_suggestions`, os enums `SuggestionState`, `MatchSignal` e
+  `DiscoveryMode`, as colunas `app_settings.discoveryMode` e `ghostDays`, as rotas de sugestão (`GET`, aceitar e
+  recusar), `POST /api/reconciliation/run` e `GET`/`PUT /api/settings/discovery`. O job de hora em hora fica com o
+  último contato do computador e o expurgo da telemetria.
+- **Os Sumidos contam 30 dias fixos** (`DIAS_SEM_CONTATO`), e a cobertura devolve o prazo para a frase do painel.
+- **A tela passa a se chamar Agentes** (`/agentes`, e `/descobertas` redireciona). É uma lista só, com as vistas
+  **Com computador**, a primeira e o endereço limpo, porque é o estado normal, como Ativos em Computadores, e **Sem
+  computador**, a exceção que a série não ligou. As colunas são Máquina, Computador, Sistema operacional, Último contato e Status, e
+  no `⋯` o Vincular a um computador ou o Desvincular. Na máquina sem computador, a sublinha da coluna Computador diz
+  por que a série não a ligou ("A série é a de ATV-00012, que já tem a máquina PC-X") ou qual computador ela parece ser
+  ("Mesmo nome que ATV-00012"), e o Vincular abre com ele escolhido. `GET /api/endpoints` devolve `dica` e `aviso` com
+  a mesma regra do vínculo automático, então a tela nunca contradiz o handshake.
+- **Saem os botões Procurar agora e Configurar.**
+
+**Por quê:**
+- **Nenhum dos onze sistemas tem fila de sugestão para aprovar.** O casamento é por regra, decidido na chegada do
+  inventário: se casa, atualiza; se não casa, cria ou recusa (`RuleImportAsset` e `MainAsset::rulepassed` do GLPI, o
+  IRE do ServiceNow, o reconciliation engine do Lansweeper, o `action_on_zero` do iTop). A pessoa só entra no caso
+  ambíguo, e a ação é desvincular ou fundir.
+- **Sugestões e Sem vínculo listavam as mesmas máquinas.** Toda máquina com sugestão estava sem vínculo, e aceitar a
+  sugestão dava o mesmo resultado que vincular à mão.
+- **O Procurar agora só existia porque o vínculo esperava o job da hora.** Decidido no handshake, não há o que
+  esperar.
+- **O modo protegia o vínculo automático de uma regra de 100 pontos que incluía o UUID contra o `serial` do
+  computador.** Sobrou a série única, a mesma regra que reconhece a reinstalação desde a CV, e o mercado não tem
+  "vincular sozinho: ligado ou desligado". O `ghostDays` só explicava o número dos Sumidos, e o Fleet usa 30 dias
+  fixos para o "missing".
+- **O nome Agentes é o da lista de Agentes do GLPI,** que mostra cada instalação do agente com a coluna Item vazia
+  quando não há computador. "Descobertas" vinha da fila, que saiu.
+
+**O que fica de fora, declarado:**
+- **Criar o computador sozinho**, que o GLPI faz quando nada casa: aqui o computador exige o modelo do catálogo e gasta
+  uma etiqueta da sequência, o motivo da D51. A máquina fica em Sem computador.
+- **A série da placa-mãe** que o agente manda quando a do produto vem de fábrica (A20 de lá) não bate com a da
+  etiqueta digitada no cadastro: essa máquina se vincula à mão.
+- **A troca de placa-mãe com a série regravada** entra como máquina nova, com o aviso de que o computador já tem a
+  máquina antiga: desvincula-se a antiga e vincula-se a nova.
+- **Dois computadores com a mesma série** não existem vivos (`assets_serial_unique_undeleted`), e a regra não liga se
+  existirem.
+
+---
+
+## DD — Agentes ganha Sumidos e o Excluir, e o Excluir revoga o agente
+
+> **Superada em parte por [DF](#df--a-máquina-tem-ficha-em-agentes):** o link para uma máquina abre a ficha dela, e o `?maquina=` sai.
+
+> **Supera em parte:** [CR](./acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra) (o
+> `bun run agente:revogar` e a revogação pelo painel, deixada de fora); [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha)
+> (as duas vistas); [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos) (os Sumidos contados nos
+> computadores); [D95](#d95--quem-carimba-o-ativo-é-o-job-não-o-handshake) (o carimbo do último contato no computador).
+
+**Decisão** (2026-11-16, comparando Agentes com o GLPI, o Fleet, o NinjaOne, o Lansweeper, o ServiceNow e o Intune):
+
+- **Agentes tem três vistas, que não se sobrepõem:** Com computador, Sem computador e **Sumidos**, a máquina sem contato
+  há mais de 30 dias, com computador ou sem. A sumida sai das outras duas, como o baixado sai de Ativos em Computadores.
+  `GET /api/endpoints?vista=com|sem|sumidos` (era `?vinculo=com|sem`).
+- **O cartão Sumidos do painel conta as máquinas da vista,** e não mais os computadores. Sai a coluna
+  `assets.lastSeenByAgentAt`, com o índice e o carimbo de hora em hora, que só esse cartão lia.
+- **`DELETE /api/endpoints/:id`, do Supervisor:** apaga a máquina (a telemetria vai junto) e a credencial do agente, e fecha
+  a conexão aberta com 1008. A reconexão leva 401, e a máquina só volta reinstalando o agente com o segredo de instalação.
+  O Handshake confere de novo a credencial, para a conexão aberta antes da exclusão não recriar a máquina. Na auditoria,
+  `DELETE` do `Endpoint` com o nome e o HWID por escrito. Sem lixeira.
+- **A máquina com computador não se exclui:** 409 "A máquina PC-X está vinculada a ATV-00012. Desvincule antes de
+  excluir.", com o computador em link. O Excluir fica no `⋯` da máquina sem computador, em Sem computador e em Sumidos.
+- **Sai o `bun run agente:revogar`.** Revogar é excluir a máquina.
+- **O link para uma máquina leva o id** (`/agentes?maquina=<id>`), e Agentes abre a vista em que ela está, já buscada pelo
+  nome. Quem monta o link (a aba Máquina, a recusa da baixa) não sabe se a máquina sumiu.
+
+**Por quê:**
+- **Todos os seis excluem a máquina pelo painel,** e o Fleet seleciona as Missing e as apaga. Sem isso, a máquina
+  formatada ou descartada ficava para sempre na lista e no número dos Sumidos.
+- **A CR deixou o botão de fora por custo, não por segurança:** "pede tela, cargo e rota". A tela agora existe. E o
+  painel faz melhor que o comando, que rodava fora do servidor e não fechava a conexão aberta; e a auditoria leva o nome
+  de quem excluiu, e não o usuário do terminal.
+- **Excluir sem revogar não servia:** o agente vivo recriaria a máquina no próximo handshake, a queixa que aparece no
+  fórum do Fleet.
+- **Sumidos como vista, e não só um número:** o número dizia que havia máquina a conferir e não dizia qual.
+
+**O que fica de fora, declarado:**
+- **A limpeza automática dos sumidos** (a "host expiry" do Fleet, as "cleanup rules" do Intune): apagaria sozinha a
+  máquina que só estava guardada numa gaveta. Com o Excluir à mão, a decisão fica com quem conhece o parque.
+- **A versão do agente na lista e o inventário diário** começam no SentinelAgente, que ainda não manda a versão nem
+  repete o handshake. Feitos na [DE](#de--a-lista-de-agentes-mostra-a-versão-do-agente).
+
+---
+
+## DE — A lista de Agentes mostra a versão do agente
+
+**Decisão** (2026-11-16, com a [A25](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a25--o-handshake-leva-a-versão-do-agente-e-vai-de-novo-uma-vez-por-dia)
+do SentinelAgente):
+
+- **O handshake ganha `AgentVersion`,** gravado em `endpoints.agentVersion`. O handshake sem ele **apaga** a versão
+  gravada, ao contrário da série: é um agente anterior à A25, e a versão de antes mentiria.
+- **A lista de Agentes tem a coluna Versão do agente,** e a busca a encontra. A aba Máquina mostra a versão junto do
+  resto do que a máquina diz de si.
+- **O agente manda o handshake de novo uma vez por dia,** com a conexão de pé. O servidor não muda nada para isso: o
+  handshake repetido atualiza a máquina e roda o vínculo pela série, como o da conexão.
+
+**Por quê:** depois de uma atualização do agente, a versão é o que diz quem ficou para trás; o GLPI, o Fleet e o
+NinjaOne mostram a coluna. E sem o reenvio diário, numa máquina sempre ligada a peça trocada e o IP novo só chegavam
+na próxima reconexão.
+
+**O que fica de fora, declarado:** marcar a versão velha com cor ou aviso. Com um pacote só, a coluna e a busca
+bastam para achar quem não atualizou.
+
+---
+
+## DF — A máquina tem ficha em Agentes
+
+**Decisão** (2026-11-16, pedida olhando a lista de Agentes, e comparada com o GLPI, o Fleet e o NinjaOne):
+
+- **`/agentes/:id` é a ficha da máquina,** no molde das outras: o card com o Status (Conectado, Desconectado), o último
+  contato, o computador e tudo o que a máquina diz de si, do fabricante ao HWID com o Copiar; e duas abas.
+- **A aba Computador** é a tabela do computador do posto (`ComputadoresNaFicha`), sem as duas datas da entrega: a linha
+  abre a ficha do computador. Sem computador, ela diz o que a lista diz na sublinha, a dica ou o aviso, com o Vincular.
+- **A aba Máquina** é o `TelemetriaDaMaquina` sem a linha da máquina e sem o inventário, que estão no card: só como ela
+  está agora e os comandos.
+- **As ações ficam no card, como a linha da lista:** Vincular e, para o Supervisor, Excluir na máquina sem computador;
+  Desvincular na com computador. Excluir volta para a lista.
+- **A linha da lista abre a ficha nas três vistas.** A com computador abria o computador, e a sem computador não abria
+  nada. A linha da aba Máquina do computador e do posto, e o link da recusa, abrem a ficha também, e o `?maquina=<id>`
+  que procurava a vista certa sai.
+- **`GET /api/endpoints/:id` traz o computador vinculado,** com o modelo, a categoria e o status, e a dica e o aviso da
+  máquina sem computador, pela mesma conta da lista.
+
+**Por quê:** a lista mostra cinco colunas, e o resto do que a máquina diz de si só aparecia na ficha do computador:
+a máquina sem computador não tinha onde ser vista. O Fleet e o NinjaOne abrem a página do host pela linha, e o GLPI, a
+do agente, com o item ligado a ela. Com a ficha, cada máquina tem um endereço, e o link não precisa mais adivinhar a
+vista.
+
+**O que fica de fora, declarado:** a aba Histórico. O vínculo e a exclusão já estão na auditoria e no histórico do
+computador, e a máquina não tem outro evento que alguém consulte.
+

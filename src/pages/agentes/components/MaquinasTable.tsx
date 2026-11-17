@@ -1,0 +1,166 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Link2, MonitorCheck, Trash2, Unlink } from 'lucide-react';
+import VincularMaquinaForm from './VincularMaquinaForm';
+import AcoesDaLinha from '../../../components/AcoesDaLinha';
+import ListaVazia from '../../../components/ListaVazia';
+import ListToolbar from '../../../components/ListToolbar';
+import { PontoDeStatus } from '../../../components/ui/badge';
+import { Card } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeadAcoes, TableHeader, TableLinha, TableNome, TableRow, TableSublinha } from '../../../components/ui/table';
+import { formatarDataHora } from '../../../helpers/format.helper';
+import { caminhoDaMaquina } from '../../../helpers/maquina.helper';
+import { comFiltros } from '../../../hooks/useVoltaComFiltros';
+import type { useListaLocalNaUrl } from '../../../hooks/usePaginaLocal';
+import type { Endpoint } from '../../../types/endpoint.types';
+import type { VistaDosAgentes } from '../hooks/useAgentes';
+
+// AS MÁQUINAS COM AGENTE, numa lista só (DC). É a lista de Agentes do GLPI: a
+// coluna Computador vazia é a máquina que ainda não é patrimônio, e a vista a
+// separa.
+//
+// A LINHA ABRE A FICHA DA MÁQUINA (DF), nas três vistas: o card com o que ela diz de
+// si, o computador que ela é e como ela está agora. O `⋯` faz o mesmo que a ficha,
+// sem abrir — o vínculo mora nesta tela (BZ).
+//
+// COM COMPUTADOR: o `⋯` desvincula.
+//
+// SEM COMPUTADOR: a série não a ligou sozinha. A linha diz por quê (o aviso do
+// servidor) ou qual computador parece ser (a dica), e o Vincular abre com ele
+// escolhido.
+//
+// SUMIDOS: sem sinal há 30 dias, com computador ou sem, e cada linha com o `⋯`
+// da vista de onde veio. Na sem computador, o Excluir (DD), que também está em
+// Sem computador para a máquina roubada; a com computador desvincula antes.
+
+type Lista = ReturnType<typeof useListaLocalNaUrl<Endpoint>>;
+
+interface Props {
+  vista: VistaDosAgentes;
+  lista: Lista;
+  carregando: boolean;
+  erro: string | null;
+  ocupado: boolean;
+  onVincular: (endpointId: string, assetId: string, targetWorkstationId: string | null) => Promise<void>;
+  onDesvincular: (maquina: Endpoint) => void;
+  /** Só para o Supervisor: sem ele, o item não aparece. */
+  onExcluir?: (maquina: Endpoint) => void;
+}
+
+const FRASE_DA_LISTA_VAZIA: Record<VistaDosAgentes, string> = {
+  com: 'Nenhuma máquina vinculada a um computador ainda.',
+  sem: 'Nenhuma máquina sem computador.',
+  sumidos: 'Nenhuma máquina sem contato há mais de 30 dias.',
+};
+
+/** A sublinha da coluna Computador na máquina sem computador. */
+function pista(maquina: Endpoint): string | null {
+  if (maquina.dica) return `${maquina.dica.sinal === 'SERIE' ? 'Mesma série' : 'Mesmo nome'} que ${maquina.dica.assetTag}`;
+  return maquina.aviso;
+}
+
+export default function MaquinasTable({
+  vista, lista, carregando, erro, ocupado, onVincular, onDesvincular, onExcluir,
+}: Props) {
+  const navigate = useNavigate();
+  // A MÁQUINA NO PAINEL DE VÍNCULO: a linha, e não o id. Quando a entrega é recusada
+  // o vínculo fica, e a máquina sai desta lista na revalidação; o painel precisa
+  // sobreviver a isso para dizer que só metade aconteceu.
+  const [vinculando, setVinculando] = useState<Endpoint | null>(null);
+
+  return (
+    <>
+      <ListToolbar
+        search={lista.search}
+        onSearchChange={lista.changeSearch}
+        placeholder="Buscar por máquina, computador ou série…"
+        page={lista.page}
+        perPage={lista.perPage}
+        total={lista.total}
+        onPageChange={lista.setPage}
+      />
+
+      <Card className="overflow-hidden">
+        <Table className="min-w-[44rem] md:min-w-[56rem]">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Máquina</TableHead>
+              <TableHead className="w-[20%]">Computador</TableHead>
+              <TableHead className="hidden w-[16%] md:table-cell">Sistema operacional</TableHead>
+              <TableHead className="hidden w-[9%] md:table-cell">Versão</TableHead>
+              <TableHead className="w-[16%]">Último contato</TableHead>
+              <TableHead className="w-40">Status</TableHead>
+              <TableHeadAcoes />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lista.visiveis.map((maquina) => {
+              // `asset` pode faltar na vista Com computador só na linha que o
+              // `SetNull` desfez entre duas revalidações: ela mostra a pista, como a sem computador.
+              const { asset } = maquina;
+              const online = maquina.status === 'ONLINE';
+              const sublinha = asset ? asset.serial : pista(maquina);
+
+              return (
+                <TableRow
+                  key={maquina.id}
+                  onClick={() => navigate(caminhoDaMaquina(maquina.id), comFiltros(lista.parametros))}
+                >
+                  <TableCell>
+                    <TableNome>{maquina.hostname}</TableNome>
+                    {maquina.biosSerial && <TableSublinha className="font-mono">{maquina.biosSerial}</TableSublinha>}
+                  </TableCell>
+                  <TableCell>
+                    <TableLinha className={asset ? 'font-mono text-text-primary' : undefined}>{asset ? asset.assetTag : '—'}</TableLinha>
+                    {sublinha && <TableSublinha className={asset ? 'font-mono' : undefined}>{sublinha}</TableSublinha>}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{maquina.osVersion}</TableCell>
+                  <TableCell className="hidden font-mono md:table-cell">{maquina.agentVersion ?? '—'}</TableCell>
+                  <TableCell>{formatarDataHora(maquina.lastSeen)}</TableCell>
+                  <TableCell>
+                    <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Conectado' : 'Desconectado'}</PontoDeStatus>
+                  </TableCell>
+                  <TableCell>
+                    <AcoesDaLinha
+                      nome={maquina.hostname}
+                      acoes={asset
+                        ? [{ rotulo: 'Desvincular', icone: Unlink, onClick: () => onDesvincular(maquina), disabled: ocupado }]
+                        : [
+                          { rotulo: 'Vincular a um computador', icone: Link2, onClick: () => setVinculando(maquina), disabled: ocupado },
+                          onExcluir && {
+                            rotulo: 'Excluir', icone: Trash2, onClick: () => onExcluir(maquina), disabled: ocupado, perigo: true,
+                          },
+                        ]}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        {lista.total === 0 && (
+          <ListaVazia
+            icone={MonitorCheck}
+            carregando={carregando}
+            erro={erro}
+            nome="máquina"
+            genero="f"
+            busca={lista.search}
+            frase={FRASE_DA_LISTA_VAZIA[vista]}
+          />
+        )}
+      </Card>
+
+      {/* Fora da tabela: a última máquina sair da lista não pode
+          remontar o painel, que perderia a frase da recusa e o que foi escolhido. */}
+      {vinculando && (
+        <VincularMaquinaForm
+          maquina={vinculando}
+          ocupado={ocupado}
+          onVincular={onVincular}
+          onCancelar={() => setVinculando(null)}
+        />
+      )}
+    </>
+  );
+}

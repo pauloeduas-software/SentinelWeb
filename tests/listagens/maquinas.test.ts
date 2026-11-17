@@ -7,8 +7,8 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // ═════════════════════════════════════════════════════════════════════════════
 // ⚠️ OS FILTROS DA LISTAGEM DE MÁQUINAS, PELO CAMINHO DO HTTP.
 //
-// Este arquivo nasceu de um 422 em requisição válida: `GET /api/endpoints?vinculo=sem`
-// respondia *campo não reconhecido: "vinculo"*. O filtro de vínculo existia no
+// Este arquivo nasceu de um 422 em requisição válida: o filtro de vínculo, hoje
+// `?vista=`, respondia *campo não reconhecido*. Ele existia no
 // `buildEndpointWhere`, estava tipado no use-case e era INALCANÇÁVEL pela borda.
 //
 // A causa: a query tem dois donos. `parseListQuery` (do `core`) é `strictObject`
@@ -56,11 +56,11 @@ async function maquina(hwid: string): Promise<string> {
   return endpoint.id;
 }
 
-describe('o filtro de vínculo', () => {
+describe('as vistas', () => {
   it('⚠️ responde 200, e não 422 por "campo não reconhecido"', async () => {
     // A asserção que o defeito quebrava. Ela vem primeiro e sozinha de propósito:
     // se ela falhar, nenhuma das outras significa nada.
-    const { status } = await listar('?vinculo=sem');
+    const { status } = await listar('?vista=sem');
     expect(status).toBe(200);
   });
 
@@ -71,11 +71,11 @@ describe('o filtro de vínculo', () => {
     const ativo = await criarAtivo(api, { statusId, modelId, name: 'Ativo da listagem' });
     await api.post(`/api/endpoints/${comCadastro}/link`, { assetId: ativo.id });
 
-    const sem = await listar('?vinculo=sem');
+    const sem = await listar('?vista=sem');
     expect(sem.body.rows.map((linha) => linha.id)).toContain(semCadastro);
     expect(sem.body.rows.map((linha) => linha.id)).not.toContain(comCadastro);
 
-    const com = await listar('?vinculo=com');
+    const com = await listar('?vista=com');
     expect(com.body.rows.map((linha) => linha.id)).toContain(comCadastro);
     expect(com.body.rows.map((linha) => linha.id)).not.toContain(semCadastro);
 
@@ -87,17 +87,37 @@ describe('o filtro de vínculo', () => {
     expect(vinculada?.asset).toEqual({ id: ativo.id, assetTag: ativo.assetTag, name: 'Ativo da listagem', serial: null });
     expect(sem.body.rows.find((linha) => linha.id === semCadastro)?.asset).toBeNull();
 
-    // E o total sem filtro é a soma dos dois: um filtro que não fecha a conta
+    // E o total sem filtro é a soma das três: um filtro que não fecha a conta
     // está escondendo linha.
+    const sumidos = await listar('?vista=sumidos');
     const tudo = await listar('');
-    expect(tudo.body.total).toBe(sem.body.total + com.body.total);
+    expect(tudo.body.total).toBe(sem.body.total + com.body.total + sumidos.body.total);
+  });
+
+  it('a sumida sai de Com e de Sem e vai para Sumidos, com computador ou sem, e o painel conta as mesmas (DD)', async () => {
+    const semComputador = await maquina('lista-sumida-orfa');
+    const comComputador = await maquina('lista-sumida-vinculada');
+    const ativo = await criarAtivo(api, { statusId, modelId, name: 'Ativo da máquina sumida' });
+    await api.post(`/api/endpoints/${comComputador}/link`, { assetId: ativo.id });
+
+    // 31 dias sem contato: o prazo é 30, fixo.
+    const ha31Dias = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    await prisma.endpoint.updateMany({ where: { id: { in: [semComputador, comComputador] } }, data: { lastSeen: ha31Dias } });
+
+    const ids = async (query: string) => (await listar(query)).body.rows.map((linha) => linha.id);
+    expect(await ids('?vista=sumidos')).toEqual(expect.arrayContaining([semComputador, comComputador]));
+    expect(await ids('?vista=com')).not.toContain(comComputador);
+    expect(await ids('?vista=sem')).not.toContain(semComputador);
+
+    const { body } = await api.get<{ sumidos: number }>('/api/reconciliation/coverage');
+    expect(body.sumidos).toBe((await listar('?vista=sumidos')).body.total);
   });
 
   it('convive com paginação e busca na MESMA query', async () => {
     // O caso que o defeito tornava impossível: as chaves dos dois donos juntas.
     // Com a query entregue inteira aos dois schemas, isto dava 422 de um lado ou
     // de outro, dependendo de qual parse rodasse primeiro.
-    const { status, body } = await listar('?vinculo=sem&page=1&perPage=10&q=lista');
+    const { status, body } = await listar('?vista=sem&page=1&perPage=10&q=lista');
     expect(status).toBe(200);
     expect(body.rows.every((linha) => linha.asset === null)).toBe(true);
   });
@@ -111,6 +131,7 @@ describe('o que a listagem continua recusando', () => {
     expect((await listar('?pag=2')).status).toBe(422);
     // A ordenação saiu da API: `?sort=` é chave desconhecida como qualquer outra.
     expect((await listar('?sort=hostname')).status).toBe(422);
-    expect((await listar('?vinculoo=sem')).status).toBe(422);
+    expect((await listar('?vistaa=sem')).status).toBe(422);
+    expect((await listar('?vista=todas')).status).toBe(422);
   });
 });

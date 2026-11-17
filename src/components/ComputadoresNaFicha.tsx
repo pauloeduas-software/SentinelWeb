@@ -9,7 +9,8 @@ import { tomDoStatus, type TipoDeStatus } from '../helpers/status.helper';
 // O COMPUTADOR NUMA ABA DE FICHA (CE): a mesma tabela no posto e no colaborador. As
 // colunas são as da lista de Computadores que cabem na aba, com a série embaixo da
 // etiqueta e o fabricante embaixo do modelo, mais as duas datas da entrega. A linha
-// abre a ficha do computador, onde mora o Devolver (BN).
+// abre a ficha do computador, onde mora o Devolver (BN). Na ficha da máquina (DF) não
+// há entrega: as duas datas saem (`semEntrega`).
 
 export interface ComputadorNaFicha {
   /** A chave da linha: a posse, ou o próprio ativo. */
@@ -32,19 +33,28 @@ interface ComputadoresNaFichaProps {
   vazio: string;
   /** A explicação embaixo da frase, com a aba vazia. */
   children?: ReactNode;
+  /** Sem as duas datas da entrega: o computador não foi entregue a quem abre a aba. */
+  semEntrega?: boolean;
 }
 
-export default function ComputadoresNaFicha({ computadores, vazio, children }: ComputadoresNaFichaProps) {
+const COLUNAS = [
+  { rotulo: 'Etiqueta', className: 'w-44' },
+  { rotulo: 'Modelo' },
+  { rotulo: 'Categoria', className: 'w-[16%]' },
+  { rotulo: 'Status', className: 'w-36' },
+];
+
+const COLUNAS_DA_ENTREGA = [
+  { rotulo: 'Devolução prevista', className: 'w-48' },
+  { rotulo: 'Desde', className: 'w-32' },
+];
+
+export default function ComputadoresNaFicha({
+  computadores, vazio, children, semEntrega = false,
+}: ComputadoresNaFichaProps) {
   return (
     <TabelaDaFicha
-      colunas={[
-        { rotulo: 'Etiqueta', className: 'w-44' },
-        { rotulo: 'Modelo' },
-        { rotulo: 'Categoria', className: 'w-[16%]' },
-        { rotulo: 'Status', className: 'w-36' },
-        { rotulo: 'Devolução prevista', className: 'w-48' },
-        { rotulo: 'Desde', className: 'w-32' },
-      ]}
+      colunas={semEntrega ? COLUNAS : [...COLUNAS, ...COLUNAS_DA_ENTREGA]}
       icone={Monitor}
       vazio={vazio}
       linhas={computadores.map(({ id, ativo, devolucaoPrevista, entregueEm }) => ({
@@ -59,8 +69,7 @@ export default function ComputadoresNaFicha({ computadores, vazio, children }: C
           </>,
           ativo.model.category.name,
           <span title={ativo.status.name}><PontoDeStatus tom={tomDoStatus(ativo.status.type)}>{ativo.status.name}</PontoDeStatus></span>,
-          formatarData(devolucaoPrevista),
-          entregueEm ? formatarDiaDoInstante(entregueEm) : '—',
+          ...(semEntrega ? [] : [formatarData(devolucaoPrevista), entregueEm ? formatarDiaDoInstante(entregueEm) : '—']),
         ],
       }))}
     >

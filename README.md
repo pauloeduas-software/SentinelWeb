@@ -57,17 +57,18 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | Seção do menu | Rota | O que é | Cargo mínimo |
 | --- | --- | --- | --- |
 | **Computadores** | `/computadores` | Listagem de computadores — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
-|  | `/computadores/:id` | Ficha do computador — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para Descobertas, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
+|  | `/computadores/:id` | Ficha do computador — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para a ficha da máquina, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
 |  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, a etiqueta do computador, se está vago; criar, editar e excluir posto | TECNICO |
-|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, registrar a saída), **Computador**, **Máquina** (link para Descobertas, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
+|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, registrar a saída), **Computador**, **Máquina** (link para a ficha da máquina, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
 |  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução) e **Histórico** | TECNICO |
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |
 |  | `/licencas/:id` | Ficha da licença — a conta e o cadastro no card, abas **Responsáveis** (com a devolução), **Chaves** e **Histórico** | TECNICO |
-| **Convergência** | `/descobertas` | O que o agente vê e o cadastro não sabe — máquinas sem vínculo, vincular e desvincular, fila de sugestões e "Procurar agora" | TECNICO |
+| **Convergência** | `/agentes` | As máquinas com o SentinelAgente — a série única liga a máquina ao computador sozinha; a vista Com computador desvincula, a Sem computador vincula à mão, e a Sumidos mostra quem parou de dar sinal. Excluir a máquina é do Supervisor | TECNICO |
+|  | `/agentes/:id` | Ficha da máquina — o que ela diz de si no card, com Vincular, Desvincular e Excluir, e as abas **Computador** (o vinculado, ou a dica e o Vincular) e **Máquina** (telemetria e comandos) | TECNICO |
 | **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | TECNICO |
 |  | `/colaboradores/:id` | Ficha do colaborador — as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | TECNICO |
-| **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa. A configuração da descoberta fica em `/descobertas` | SUPERVISOR |
+| **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa | SUPERVISOR |
 | **Gestão** | `/usuarios` | Quem opera o sistema — Técnico, Supervisor ou Administrador (AV). O cadastro pede nome, e-mail e cargo, e a conta nasce com uma senha temporária (o login é o e-mail) | ADMIN |
 
 A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,
@@ -136,7 +137,6 @@ bun run dev
 | `db:seed` | O seed principal: categorias, status e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
 | `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
 | `acesso:administrador` | Cria um administrador: `--nome "Nome Completo" --email "e-mail" --senha "senha"`. É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
-| `agente:revogar` | Revoga o token de uma máquina (`-- <hwid>`): o `/agent-hub` passa a recusá-lo na próxima conexão |
 
 ### Migrations
 

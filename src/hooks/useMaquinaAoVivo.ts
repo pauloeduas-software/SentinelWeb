@@ -6,10 +6,10 @@ import { useNotificacao } from './useNotificacao';
 // A MÁQUINA AGORA: a amostra que chega sozinha e os comandos que se manda nela.
 //
 // Hook COMPARTILHADO, em `src/hooks`, pelo mesmo motivo do `useOcupantes`: as
-// duas telas que mostram uma máquina fazem a mesma coisa com ela, e duas cópias
+// três telas que mostram uma máquina fazem a mesma coisa com ela, e cópias
 // divergiriam no primeiro ajuste. A aba Máquina do ativo pergunta "como está o
-// equipamento desta ficha"; a ficha do posto pergunta "como está o computador
-// desta mesa" — e a resposta é a mesma consulta.
+// equipamento desta ficha"; a ficha do posto, "como está o computador deste
+// posto"; a da máquina, "como ela está agora" — e a resposta é a mesma consulta.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // A CONFIRMAÇÃO FICA, E O ALERT NÃO.

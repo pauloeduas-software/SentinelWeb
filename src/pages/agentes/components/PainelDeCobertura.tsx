@@ -13,8 +13,6 @@ import type { Cobertura } from '../../../types/reconciliation.types';
 interface Props {
   cobertura: Cobertura | undefined;
   erro: string | null;
-  /** O `ghostDays` da configuração, que a frase do Sumidos cita. */
-  diasSemContato?: number;
 }
 
 interface Numero {
@@ -25,7 +23,7 @@ interface Numero {
   ajuda: string;
 }
 
-function numeros(cobertura: Cobertura | undefined, diasSemContato: number | undefined): Numero[] {
+function numeros(cobertura: Cobertura | undefined): Numero[] {
   return [
     {
       rotulo: 'Com agente',
@@ -40,21 +38,21 @@ function numeros(cobertura: Cobertura | undefined, diasSemContato: number | unde
     {
       rotulo: 'Sumidos',
       valor: cobertura?.sumidos,
-      // Sem a configuração não há prazo a citar: o número seria inventado.
-      ajuda: diasSemContato === undefined
-        ? 'já foram vistos e pararam de dar sinal: confira se ainda existem'
-        : `sem contato há mais de ${diasSemContato} dias: confira se ainda existem`,
+      // Sem a resposta não há prazo a citar: o número seria inventado.
+      ajuda: cobertura
+        ? `máquinas sem contato há mais de ${cobertura.diasSemContato} dias: confira se ainda existem`
+        : 'máquinas que pararam de dar sinal: confira se ainda existem',
     },
   ];
 }
 
-export default function PainelDeCobertura({ cobertura, erro, diasSemContato }: Props) {
+export default function PainelDeCobertura({ cobertura, erro }: Props) {
   // Sem isto, a consulta que falhou mostraria "—" para sempre, como se ainda viesse.
   if (!cobertura && erro) return <Aviso className="mb-4">Não foi possível carregar os números: {erro}</Aviso>;
 
   return (
     <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]">
-      {numeros(cobertura, diasSemContato).map(({ rotulo, valor, ajuda }) => (
+      {numeros(cobertura).map(({ rotulo, valor, ajuda }) => (
         <div key={rotulo} className="rounded-lg border border-border-sutil bg-surface-card px-4 py-3 shadow-sm">
           <span className="block truncate text-sm text-text-tertiary">{rotulo}</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums text-text-primary">{valor ?? '—'}</span>

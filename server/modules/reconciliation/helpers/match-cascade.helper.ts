@@ -1,195 +1,109 @@
-import type { MatchSignal } from '@prisma/client';
-import { normalizeHostname, normalizeSerial, normalizeUuid } from './normalize-identity.helper';
+import { normalizeHostname, normalizeSerial } from './normalize-identity.helper';
 
-// A CASCATA E A PONTUAÇÃO — funções puras. Recebem a identidade de um endpoint e
-// a dos candidatos, devolvem o que casou e quanto vale.
+// A REGRA DO VÍNCULO — função pura. Recebe a máquina e o parque, devolve o que
+// fazer com ela. Nenhuma consulta aqui dentro, de propósito: é testável linha a
+// linha sem banco nenhum (DC).
 //
-// Nenhuma consulta aqui dentro, de propósito: a regra que decide o que é um
-// vínculo confiável é a coisa que mais vai mudar com dado real, e ela
-// é testável linha a linha sem banco nenhum.
-//
-// ─────────────────────────────────────────────────────────────────────────────
-// ERAM QUATRO SINAIS, E UM DELES NÃO CABIA AQUI
-//
-// `serial → uuid → MAC → hostname`, contra o ativo. Escrevendo contra a árvore,
-// o MAC nunca cabia: **`Asset` não tem coluna de endereço MAC** — ele tem
-// `assetTag`, `serial` e `name`, todos digitados por gente. Não existe MAC do
-// lado cadastrado para comparar, e pontuar um sinal que nunca casa faria a
-// pontuação descrever uma coisa que não acontece.
-// ─────────────────────────────────────────────────────────────────────────────
+// É a regra 14 de importação do GLPI ("update by serial", `RuleImportAsset.xml`)
+// contra o computador cadastrado: a série que a máquina manda igual à de UM
+// computador sem máquina liga as duas sozinha. O UUID não entra porque o
+// computador não o guarda (ele reconhece a máquina reinstalada, na CV), e o nome
+// só sugere: é renomeável e se repete, e o vínculo errado reescreve o inventário.
 
-/** Quanto vale cada sinal. Ver o D46 para por que hostname não vale 100. */
-const PONTOS: Record<MatchSignal, number> = {
-  SERIAL: 100,
-  UUID: 100,
-  // Renomeável, e volta atrás: "PC-ANA" vira "PC-ANA-NOVO" e depois "PC-ANA".
-  HOSTNAME: 60,
-};
-
-/** O piso para um vínculo AUTOMÁTICO, e só em `discoveryMode = ON` (D51). */
-export const PONTOS_PARA_VINCULO_AUTOMATICO = 100;
-
-interface IdentidadeDoEndpoint {
-  biosSerial: string | null;
-  systemUuid: string | null;
+export interface MaquinaDoParque {
+  id: string;
   hostname: string;
+  biosSerial: string | null;
+  /** A máquina que alguém desvinculou não volta sozinha (DC). */
+  autoLinkOff: boolean;
 }
 
-interface CandidatoAtivo {
+export interface AtivoDoParque {
   id: string;
   assetTag: string;
   serial: string | null;
   name: string | null;
+  retiredAt: Date | null;
+  /** A máquina que já está nele, quando está. */
+  endpoint: { id: string; hostname: string } | null;
 }
 
-interface Casamento {
-  /** O id do ativo que casou. */
-  alvoId: string;
-  signal: MatchSignal;
-  score: number;
-  /** O valor que casou, para a evidência da sugestão mostrar. */
-  valor: string;
+export interface DicaDoVinculo {
+  ativo: Pick<AtivoDoParque, 'id' | 'assetTag'>;
+  /** Por que este computador: a mesma série, ou o mesmo nome. */
+  sinal: 'SERIE' | 'NOME';
 }
 
-interface ColisaoDeEvidencia {
-  signal: MatchSignal;
-  valor: string;
-  alvoIds: string[];
+export interface AnaliseDaMaquina {
+  /** O computador a que ela se liga sozinha, quando há. */
+  vincularA: AtivoDoParque | null;
+  /** O computador que o Vincular já abre escolhido, quando não ligou sozinha. */
+  dica: DicaDoVinculo | null;
+  /** Por que a série não ligou, quando ela bate com algo. */
+  aviso: string | null;
 }
 
-interface ResultadoDaCascata {
-  /** No máximo um por alvo: o sinal de maior pontuação que casou com ele. */
-  casamentos: Casamento[];
-  /**
-   * Evidência que casou com MAIS DE UM candidato. Não é casamento fraco: é
-   * evidência ZERO, e vira alerta.
-   */
-  colisoes: ColisaoDeEvidencia[];
-}
-
-type Extrator<T> = (candidato: T) => string | null;
-
-/** Indexa os candidatos por um valor normalizado, para achar colisão em O(n). */
-function indexar<T extends { id: string }>(candidatos: T[], extrair: Extrator<T>): Map<string, string[]> {
-  const indice = new Map<string, string[]>();
-  for (const candidato of candidatos) {
-    const chave = extrair(candidato);
-    if (!chave) continue;
-    const lista = indice.get(chave);
-    if (lista) lista.push(candidato.id);
-    else indice.set(chave, [candidato.id]);
+/**
+ * As séries que aparecem em mais de uma MÁQUINA. A lista de fábrica do
+ * `normalize-identity.helper` nunca vai conter todos os textos que um
+ * fabricante inventa; o parque descobre o resto. Uma série repetida em duas
+ * máquinas não identifica nenhuma das duas (D46).
+ */
+export function seriesRepetidas(series: (string | null)[]): Set<string> {
+  const contagem = new Map<string, number>();
+  for (const serie of series) {
+    const valor = normalizeSerial(serie);
+    if (valor) contagem.set(valor, (contagem.get(valor) ?? 0) + 1);
   }
-  return indice;
+  return new Set([...contagem].filter(([, vezes]) => vezes > 1).map(([valor]) => valor));
 }
 
-/**
- * Indexa por VÁRIOS valores do mesmo candidato, sob a mesma chave.
- *
- * Serve ao sinal que pode casar por mais de uma coluna do lado cadastrado — o
- * hostname contra `name` e contra `assetTag`. Índices separados esconderiam a
- * ambiguidade entre eles; aqui, dois ativos alcançados pela mesma grafia caem na
- * mesma lista e a regra da colisão os pega.
- *
- * O `Set` por candidato existe porque um ativo cujo `name` é igual ao `assetTag`
- * não deve aparecer duas vezes e simular uma colisão consigo mesmo.
- */
-function indexarPorVarios<T extends { id: string }>(candidatos: T[], extratores: Extrator<T>[]): Map<string, string[]> {
-  const indice = new Map<string, string[]>();
-  for (const candidato of candidatos) {
-    const chaves = new Set<string>();
-    for (const extrair of extratores) {
-      const chave = extrair(candidato);
-      if (chave) chaves.add(chave);
-    }
-    for (const chave of chaves) {
-      const lista = indice.get(chave);
-      if (lista) lista.push(candidato.id);
-      else indice.set(chave, [candidato.id]);
-    }
+/** O que fazer com a máquina sem computador. */
+export function analisarMaquina(
+  maquina: MaquinaDoParque,
+  ativos: AtivoDoParque[],
+  repetidas: Set<string>,
+): AnaliseDaMaquina {
+  const pelaSerie = analisarSerie(maquina, ativos, repetidas);
+  if (pelaSerie.vincularA || pelaSerie.dica) return pelaSerie;
+  return { ...pelaSerie, dica: dicaPeloNome(maquina, ativos) };
+}
+
+function analisarSerie(maquina: MaquinaDoParque, ativos: AtivoDoParque[], repetidas: Set<string>): AnaliseDaMaquina {
+  const nada = { vincularA: null, dica: null, aviso: null };
+  const serie = normalizeSerial(maquina.biosSerial);
+  if (!serie) return nada;
+  if (repetidas.has(serie)) return { ...nada, aviso: 'A série se repete em outra máquina.' };
+
+  // O índice `assets_serial_unique_undeleted` já impede dois computadores vivos
+  // com a mesma série; os dois aqui seriam um deles na lixeira, que o chamador
+  // não passa. Fica a guarda, porque pegar o primeiro seria pior que não ligar.
+  const casados = ativos.filter((ativo) => normalizeSerial(ativo.serial) === serie);
+  if (casados.length === 0) return nada;
+  if (casados.length > 1) return { ...nada, aviso: 'A série bate com mais de um computador.' };
+
+  const [ativo] = casados;
+  if (ativo.retiredAt) return { ...nada, aviso: `A série é a de ${ativo.assetTag}, que teve baixa.` };
+  if (ativo.endpoint && ativo.endpoint.id !== maquina.id) {
+    // A troca de placa-mãe com a série regravada cai aqui: a máquina antiga
+    // continua no computador até alguém desvinculá-la.
+    return { ...nada, aviso: `A série é a de ${ativo.assetTag}, que já tem a máquina ${ativo.endpoint.hostname}.` };
   }
-  return indice;
+  if (maquina.autoLinkOff) return { ...nada, dica: { ativo, sinal: 'SERIE' } };
+  return { ...nada, vincularA: ativo };
 }
 
 /**
- * Acumulador da cascata: aplica um sinal e guarda o melhor por alvo.
- *
- * **A REGRA QUE JUSTIFICA O ARQUIVO:** evidência que casa com mais de um
- * candidato **não é evidência** — pontua zero e vira colisão, nunca "pega o
- * primeiro". Pegar o primeiro é pior do que não vincular: cria um vínculo errado
- * que ninguém revisa, porque o sistema disse que estava certo (D46).
+ * O nome da máquina igual ao nome ou à etiqueta de UM computador. Conta todos os
+ * vivos, inclusive os que já têm máquina: tirá-los de vista transformaria "não
+ * sei qual dos dois" em "é este" (D46).
  */
-function novaCascata() {
-  const casamentos = new Map<string, Casamento>();
-  const colisoes: ColisaoDeEvidencia[] = [];
+function dicaPeloNome(maquina: MaquinaDoParque, ativos: AtivoDoParque[]): DicaDoVinculo | null {
+  const nome = normalizeHostname(maquina.hostname);
+  if (!nome) return null;
 
-  return {
-    aplicar(signal: MatchSignal, valorDoEndpoint: string | null, indice: Map<string, string[]>): void {
-      if (!valorDoEndpoint) return;
-
-      const alvos = indice.get(valorDoEndpoint);
-      if (!alvos || alvos.length === 0) return;
-
-      if (alvos.length > 1) {
-        colisoes.push({ signal, valor: valorDoEndpoint, alvoIds: alvos });
-        return;
-      }
-
-      const alvoId = alvos[0];
-      const score = PONTOS[signal];
-      const jaCasado = casamentos.get(alvoId);
-      // Um alvo só aparece uma vez, com o MELHOR sinal: serial e hostname
-      // casando com o mesmo ativo é uma sugestão, não duas.
-      if (!jaCasado || jaCasado.score < score) {
-        casamentos.set(alvoId, { alvoId, signal, score, valor: valorDoEndpoint });
-      }
-    },
-    resultado(): ResultadoDaCascata {
-      return { casamentos: [...casamentos.values()], colisoes };
-    },
-  };
-}
-
-/**
- * ENDPOINT × ATIVO — a cascata do vínculo (`LINK`).
- *
- * `valoresRepetidosNoParque` são os valores que aparecem em mais de uma MÁQUINA:
- * um serial em branco repetido em vinte endpoints é lixo mesmo que case com um
- * único ativo, e a lista estática do `normalize-identity` nunca vai conter todos
- * os textos que uma fábrica inventa. Quem os descobre é o banco, e é por isso
- * que eles entram por parâmetro em vez de virarem mais uma constante aqui.
- */
-export function casarEndpointComAtivos(
-  identidade: IdentidadeDoEndpoint,
-  candidatos: CandidatoAtivo[],
-  valoresRepetidosNoParque: Set<string> = new Set(),
-): ResultadoDaCascata {
-  const cascata = novaCascata();
-
-  const util = (valor: string | null): string | null =>
-    valor && !valoresRepetidosNoParque.has(valor) ? valor : null;
-
-  const serial = util(normalizeSerial(identidade.biosSerial));
-  const uuid = util(normalizeUuid(identidade.systemUuid));
-  const hostname = normalizeHostname(identidade.hostname);
-
-  // O `serial` do ativo é digitado por gente, e um UUID de sistema colado ali é
-  // o caso real de quem cadastrou a máquina lendo a tela do agente. Por isso os
-  // dois primeiros sinais olham a MESMA coluna do ativo.
-  cascata.aplicar('SERIAL', serial, indexar(candidatos, (a) => normalizeSerial(a.serial)));
-  cascata.aplicar('UUID', uuid, indexar(candidatos, (a) => normalizeUuid(a.serial)));
-
-  // UM ÍNDICE SÓ PARA `name` E `assetTag`, e não uma chamada para cada.
-  //
-  // Com dois índices separados, a regra da colisão — que é por índice — não via
-  // a ambiguidade ENTRE eles: um hostname que casava com o `name` de um ativo e
-  // com o `assetTag` de outro produzia DUAS sugestões de 60 pontos em vez de
-  // uma colisão de zero. É o D46 vazando pela fresta entre as duas chamadas, e a
-  // pergunta que o sinal responde é uma só — *que ativo se chama assim?* —, então
-  // o índice também tem que ser um só.
-  cascata.aplicar('HOSTNAME', hostname, indexarPorVarios(candidatos, [
-    (a) => normalizeHostname(a.name),
-    (a) => normalizeHostname(a.assetTag),
-  ]));
-
-  return cascata.resultado();
+  const casados = ativos.filter((ativo) => !ativo.retiredAt
+    && (normalizeHostname(ativo.name) === nome || normalizeHostname(ativo.assetTag) === nome));
+  if (casados.length !== 1 || casados[0].endpoint) return null;
+  return { ativo: casados[0], sinal: 'NOME' };
 }

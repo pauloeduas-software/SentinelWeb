@@ -352,16 +352,6 @@ test('copiar de novo não encurta o retorno do botão', async ({ page, request }
   await expect(page.getByRole('button', { name: 'Copiada', exact: true })).toBeVisible();
 });
 
-test('o Procurar agora responde com o placar no cartão', async ({ page }) => {
-  await page.goto('/descobertas');
-  await page.getByRole('button', { name: 'Procurar agora' }).first().click();
-
-  const cartao = page.getByRole('status');
-  await expect(cartao).toContainText('sem vínculo');
-  await expect(cartao).toContainText('sugest');
-  await conferirCanto(page, cartao);
-});
-
 test('a recusa na ficha do posto sai no cartão, e a linha continua aberta', async ({ page, request }) => {
   const nomeDoPosto = `Mesa do cartão ${Date.now()}`;
   const pessoa = `Pessoa do cartão ${Date.now()}`;

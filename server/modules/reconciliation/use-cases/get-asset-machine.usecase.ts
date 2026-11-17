@@ -8,7 +8,7 @@ import { AppError } from '../../../infra/errors/app-error';
 //
 // A ROTA CHAMA `/machine`, e não o nome de um dos conteúdos. É a mesma regra que
 // aposentou `/itam` em favor de `/ativos` (hoje `/computadores`) e que fez a tela se
-// chamar `/descobertas`: o nome é do que a coisa É, não do que ela era quando nasceu.
+// chamar `/agentes`: o nome é do que a coisa É, não do que ela era quando nasceu.
 // ═════════════════════════════════════════════════════════════════════════════
 
 /** A máquina vinculada a um ativo, ou a resposta vazia. */
@@ -29,7 +29,7 @@ type ClienteDaMaquina = Omit<typeof prisma, `$${string}`>;
 
 /**
  * O computador com MÁQUINA vinculada não recebe baixa nem vai para a lixeira
- * (CL): 409, com a máquina em link para Descobertas, onde mora o Desvincular.
+ * (CL): 409, com a máquina em link para Agentes, onde mora o Desvincular.
  * Sem a recusa, a máquina seguia ligada a um computador que saiu, e a aba
  * Máquina continuava com a telemetria e os comandos dele.
  *
@@ -48,7 +48,7 @@ export async function assertSemMaquina(
   if (!maquina) return;
   throw new AppError(
     `${sujeito} ainda tem a máquina ${maquina.hostname} vinculada. `
-    + `Desvincule pela tela de Descobertas antes de ${operacao}.`,
+    + `Desvincule na tela Agentes antes de ${operacao}.`,
     409,
     [{ tipo: 'maquina', id: maquina.id, nome: maquina.hostname }],
   );

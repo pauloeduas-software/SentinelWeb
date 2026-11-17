@@ -94,9 +94,9 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
   {
     titulo: 'Convergência',
     itens: [
-      // O que o agente VÊ e o cadastro não sabe. Perto do inventário
-      // porque é dele que a tela fala, não do RMM.
-      { to: '/descobertas', label: 'Descobertas', icon: Radar, cargo: 'TECNICO' },
+      // As máquinas com agente e qual computador cada uma é. Perto do
+      // inventário porque é dele que a tela fala, não do RMM.
+      { to: '/agentes', label: 'Agentes', icon: Radar, cargo: 'TECNICO' },
     ],
   },
   {

@@ -136,17 +136,12 @@ const ROTAS: Record<string, ExigenciaDaRota> = {
   'GET /api/endpoints/:id': 'TECNICO',
   'GET /api/assets/:id/machine': 'TECNICO',
   'GET /api/reconciliation/coverage': 'TECNICO',
-  'GET /api/reconciliation/suggestions': 'TECNICO',
-  'POST /api/reconciliation/run': 'SUPERVISOR',
-  'POST /api/reconciliation/suggestions/:id/accept': 'TECNICO',
-  'POST /api/reconciliation/suggestions/:id/reject': 'TECNICO',
   'POST /api/endpoints/:id/link': 'TECNICO',
   'POST /api/endpoints/:id/link-and-checkout': 'TECNICO',
   'DELETE /api/endpoints/:id/link': 'TECNICO',
   'POST /api/endpoints/:id/command': 'SUPERVISOR',
+  'DELETE /api/endpoints/:id': 'SUPERVISOR',
   'GET /api/settings/next-asset-tag': 'TECNICO',
-  'GET /api/settings/discovery': 'TECNICO',
-  'PUT /api/settings/discovery': 'SUPERVISOR',
 
   // ── O CATÁLOGO, gerado ────────────────────────────────────────────────────
   //

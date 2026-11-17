@@ -29,7 +29,7 @@ model Endpoint {
   // DOIS VALORES, e não os três que chegaram a ser propostos: `NEVER_SEEN` seria um valor
   // que NENHUMA linha desta tabela pode ter, porque a linha nasce de um
   // handshake. "Cadastrado e nunca visto" é pergunta do ATIVO, e quem responde é
-  // `Asset.lastSeenByAgentAt` no painel de cobertura.
+  // o painel de cobertura, pelo `Asset` sem máquina.
   status   AgentStatus @default(ONLINE)
   lastSeen DateTime    @default(now())
 
@@ -51,6 +51,10 @@ model Endpoint {
   /// As placas de vídeo, como o SentinelAgente as manda (`Gpus`, A22 de lá): a
   /// lista em PascalCase, lida pelo front como os discos da telemetria.
   gpus          Json?
+  /// A versão do SentinelAgente que mandou o último handshake (`AgentVersion`,
+  /// A25 de lá): a lista de Agentes a mostra, para achar quem ficou com o agente
+  /// velho. Nula no agente anterior à A25, que não a manda (DE).
+  agentVersion  String?
 
   // ── O VÍNCULO COM O PATRIMÔNIO (D45) ─────────────────────────────────────
   //
@@ -65,8 +69,11 @@ model Endpoint {
   assetId String? @unique @db.Uuid
   asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
+  /// O Desvincular liga e o vínculo à mão desliga (DC): a máquina que alguém
+  /// desvinculou não volta sozinha para o mesmo computador no próximo handshake.
+  autoLinkOff Boolean @default(false)
+
   telemetries Telemetry[]
-  suggestions ReconciliationSuggestion[] @relation("SugestaoDoEndpoint")
 
   @@map("endpoints")
 }
@@ -106,7 +113,7 @@ model Telemetry {
 ///
 /// SÓ O HASH. O token é aleatório de 256 bits, então SHA-256 basta (não é senha
 /// de gente, que pede argon2): quem lê o banco não consegue se passar pela
-/// máquina. Revogar é apagar a linha (`bun run agente:revogar <hwid>`).
+/// máquina. Revogar é apagar a linha, junto com a máquina: o Excluir de Agentes (DD).
 model AgentCredential {
   hwid      String   @id
   tokenHash String   @unique
@@ -549,8 +556,7 @@ model Workstation {
 //
 // NENHUMA coluna aqui pode se chamar `status`, `lastSeen` ou `hwid`: são os
 // nomes do `Endpoint` (lado RMM), e é a ausência deles que faz o compilador
-// barrar uma query do RMM que aponte para esta tabela (D13). O último contato
-// do agente se chama `lastSeenByAgentAt`.
+// barrar uma query do RMM que aponte para esta tabela (D13).
 model Asset {
   id String @id @default(uuid()) @db.Uuid
 
@@ -617,32 +623,9 @@ model Asset {
   stockMovements StockMovement[]
 
   // ── A CONVERGÊNCIA COM O RMM ─────────────────────────────────────────────
-  //
-  // `lastSeenByAgentAt`, e NUNCA `lastSeen` (D13). Se esta coluna se chamasse
-  // `lastSeen`, o `markStaleEndpointsOffline` apontando para o model errado
-  // COMPILARIA — e marcaria a frota inteira como OFFLINE em silêncio. Com o nome
-  // diferente, o mesmo erro vira erro de compilação.
-  //
-  // QUEM ESCREVE É O JOB, não o handshake (D95). O `touchEndpoint` roda a cada
-  // mensagem de cada máquina; um UPDATE condicional em `assets` ali seria
-  // executado milhões de vezes por dia para quase nunca casar, e acoplaria a
-  // tabela de patrimônio ao caminho de ingestão. A pergunta que esta coluna
-  // responde — "não é visto há quantos dias?" — tolera uma hora de atraso.
-  //
-  // E ela EXISTE, em vez de ser derivada pelo `Endpoint`, porque a linha da
-  // máquina descoberta pode sumir — apagá-la não pode zerar o histórico de "um
-  // agente já viu este ativo".
-  lastSeenByAgentAt DateTime?
 
   /// A máquina descoberta que É este ativo. Lado fraco do 1:1 — a FK mora lá (D45).
   endpoint Endpoint?
-
-  // `suggestions`, e não o `ReconciliationSuggestion` que o `prisma format`
-  // escreveu sozinho: o nome gerado não é convenção nenhuma e destoa do outro
-  // lado da relação (`Endpoint` a chama de `suggestions`). Nome de campo de
-  // relação não existe no banco, então isto
-  // NÃO pede migração — o que ele muda é o que se lê no `include`.
-  suggestions ReconciliationSuggestion[]
 
   @@index([deletedAt])
   @@index([statusId])
@@ -654,7 +637,6 @@ model Asset {
   // (`WHERE …`) moram de propósito só no SQL.
   @@index([retiredReasonId])
   @@index([retiredAt])
-  @@index([lastSeenByAgentAt])
   @@map("assets")
 }
 
@@ -789,20 +771,6 @@ model AppSetting {
   assetTagPrefix   String @default("ATV-")
   assetTagZerofill Int    @default(5)
   assetTagNext     Int    @default(1)
-
-  // ── OS BOTÕES DA DESCOBERTA ──────────────────────────────────────────────
-  //
-  // Moram no singleton que já existe, e não numa tabela de configuração nova:
-  // são dois valores, não um domínio.
-  //
-  // `SUGGEST` é o padrão e isso é o D51: em `ON`, a varredura vincula sozinha
-  // a máquina ao ativo quando há um único candidato de 100 pontos, sem ninguém
-  // conferir — e um vínculo errado põe o último contato e a telemetria da máquina no
-  // ativo errado até alguém desvincular.
-  discoveryMode DiscoveryMode @default(SUGGEST)
-
-  /// Ativo sem contato de agente há mais que isto está SUMIDO.
-  ghostDays Int @default(30)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -948,85 +916,6 @@ model LicenseCheckout {
   @@index([assignedPersonId, checkinAt])
   @@index([assignedAssetId, checkinAt])
   @@map("license_checkouts")
-}
-
-// ============================================================================
-// CONVERGÊNCIA RMM × ITAM — docs/decisoes/reconciliacao.md (D45–D51, D95–D103)
-//
-// O `Endpoint` sabe o que a máquina É; o `Asset` sabe o que a empresa COMPROU e
-// de quem cobra. Tudo aqui existe para ligar os dois SEM FUNDI-LOS (D45) e para
-// transformar o que o agente OBSERVA em cadastro que uma pessoa CONFIRMA.
-//
-// A regra que atravessa tudo isto: nada aqui escreve posse sozinho. A fila
-// propõe, um humano aceita, e quem grava é o use-case de posse — com o zod da
-// borda, o AuditLog e as invariantes 1, 2 e 4 que já existem.
-// ============================================================================
-
-/// O que o sistema faz quando descobre máquina sem cadastro. `SUGGEST` por
-/// padrão, e o porquê está no D51.
-enum DiscoveryMode {
-  OFF
-  SUGGEST
-  ON
-}
-
-/// POR QUE o sistema acha que este endpoint é este ativo. O ponto de cada um
-/// está em `helpers/match-cascade.helper.ts`, não aqui: pontuação é regra de
-/// negócio e muda; o nome do sinal é o vocabulário e não muda.
-enum MatchSignal {
-  SERIAL
-  UUID
-  HOSTNAME
-}
-
-enum SuggestionState {
-  PENDING
-  ACCEPTED
-  REJECTED
-  /// A evidência mudou e esta sugestão foi substituída por outra. Não é recusa:
-  /// ninguém disse não, o mundo é que mudou.
-  SUPERSEDED
-}
-
-// A FILA DE RECONCILIAÇÃO. A sugestão é sempre a mesma afirmação: esta máquina
-// É aquele ativo.
-model ReconciliationSuggestion {
-  id String @id @default(uuid()) @db.Uuid
-
-  endpointId String @db.Uuid
-
-  /// O alvo: o ativo que esta máquina É.
-  assetId String? @db.Uuid
-
-  /// 0 a 100, e todo ponto vem de sinal de hardware: é a cascata de identidade
-  /// que pontua, não um palpite sobre gente.
-  score  Int
-  signal MatchSignal?
-
-  /// O QUE o sistema viu — qual sinal casou, com que valor, em que hostname.
-  /// Vai para a tela: sugestão sem evidência visível é palpite, e ninguém
-  /// deveria aceitar um palpite que reescreve o inventário.
-  evidence Json
-
-  /// sha256 da evidência normalizada. É o que separa "já me disseram não sobre
-  /// ISTO" de "já me disseram não sobre este par, faça o que fizer" (D97).
-  evidenceHash String
-
-  state      SuggestionState @default(PENDING)
-  resolvedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  endpoint Endpoint @relation("SugestaoDoEndpoint", fields: [endpointId], references: [id], onDelete: Cascade)
-  asset    Asset?   @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  // O índice que impede a fila de empilhar (`sugestao_pendente_por_alvo`, com
-  // COALESCE na FK nulável) é PARCIAL e nasce na migration escrita à mão.
-  @@index([state])
-  @@index([endpointId, state])
-  @@index([assetId])
-  @@map("reconciliation_suggestions")
 }
 
 // ============================================================================

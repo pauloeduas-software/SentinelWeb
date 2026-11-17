@@ -17,7 +17,7 @@ import type { MaquinaDoAtivo } from '../../../../types/reconciliation.types';
 //
 // O painel é `components/TelemetriaDaMaquina` porque a ficha do POSTO
 // mostra o mesmo — o computador da mesa é um ativo, visto do outro lado. A aba é
-// só ele: o vínculo mora em Descobertas, e a linha do painel leva para lá (BZ).
+// só ele: o vínculo mora em Agentes, e a linha do painel leva para lá (BZ).
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface MaquinaTabProps {
@@ -31,8 +31,8 @@ export default function MaquinaTab({ maquina, carregando, erro }: MaquinaTabProp
     return (
       <CartaoVazio icone={Monitor} carregando={carregando} erro={erro} frase="Nenhuma máquina vinculada a este computador.">
         <span className="max-w-md text-xs leading-relaxed">
-          Se este computador deveria ter agente, a máquina aparece em Descobertas assim que ele mandar o
-          primeiro sinal.
+          Se este computador deveria ter agente, a máquina se vincula sozinha quando mandar a mesma série;
+          senão, aparece em Agentes para vincular.
         </span>
       </CartaoVazio>
     );

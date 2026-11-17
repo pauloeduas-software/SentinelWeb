@@ -5,9 +5,10 @@ import type { Ator } from '../../audit/audit.types';
 import { ASSET_WRITE_SELECT } from '../helpers/asset-select.helper';
 import { assertEtiquetaESerieLivres } from './assert-unique-asset.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
+import { vincularMaquinaDoComputador } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 
 export async function restoreAsset(id: string, ator: Ator) {
-  return prisma.$transaction(async (tx) => {
+  const salvo = await prisma.$transaction(async (tx) => {
     // A trava ANTES de ler: sem ela, um duplo clique restaurava duas vezes e o
     // histórico ganhava dois RESTORE para um fato só. A trava é sobre a LINHA
     // e não filtra a lixeira (`lock-asset.usecase.ts`).
@@ -37,4 +38,9 @@ export async function restoreAsset(id: string, ator: Ator) {
 
     return tx.asset.findFirstOrThrow({ where: { id }, select: ASSET_WRITE_SELECT });
   });
+
+  // O computador vivo com série procura a máquina que chegou antes dele (DC).
+  // Depois da transação: o vínculo trava a máquina e o ativo de novo, em outra.
+  await vincularMaquinaDoComputador(id);
+  return salvo;
 }

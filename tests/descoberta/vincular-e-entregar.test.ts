@@ -7,7 +7,7 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 // VINCULAR E ENTREGAR AO POSTO NUMA OPERAÇÃO — `POST /api/endpoints/:id/link-and-checkout`.
 //
 // É o cadastro de um computador novo contado de ponta a ponta, a partir de
-// `/descobertas`: a máquina apareceu, o ativo existe, a mesa dele é a Mesa 1.
+// `/agentes`: a máquina apareceu, o ativo existe, a mesa dele é a Mesa 1.
 // Duas operações do sistema encadeadas em SEQUÊNCIA, sem transação em volta
 // (o Prisma não aninha), e a ordem é o que este arquivo fixa: vincular primeiro.
 //
