@@ -370,8 +370,8 @@ tecnologias e boas práticas, não mais funcionalidades*):
   `@fastify/static` já manda `max-age=0` com ETag e não há carregamento sob demanda; o banner é aparência.
 - **O Dockerfile**, até haver destino de produção: não há onde rodar, e o do ModuloDefault faz o bundle de
   outro servidor.
-- **Pendente de decisão, não recusado:** a acessibilidade dos modais (Esc, foco, `role="dialog"`: 15 modais
-  montam o próprio fundo e só 2 têm o papel) e o `htmlFor` dos rótulos. Ficam para a refeita do visual.
+- **Deixado para a refeita do visual, e feito na [AY](#ay--o-visual-é-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro):**
+  a acessibilidade dos modais (Esc, foco, `role="dialog"`) e o `htmlFor` dos rótulos.
 
 ## AY — O visual é em tema claro e escuro, e a linha inteira abre o registro
 

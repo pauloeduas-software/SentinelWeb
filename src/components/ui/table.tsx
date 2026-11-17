@@ -19,17 +19,23 @@ function tituloDe(conteudo: ReactNode): string | undefined {
 }
 
 /** O tipo da coluna, que dá a largura. A do nome não tem tipo: fica com o que sobra. */
-export type TipoDeColuna = 'etiqueta' | 'relacao' | 'rotulo' | 'quantidade' | 'prazo' | 'data' | 'dataHora' | 'curta' | 'status' | 'contagem' | 'ip';
+export type TipoDeColuna = 'etiqueta' | 'relacao' | 'rotulo' | 'quantidade' | 'prazo' | 'vencimento' | 'data' | 'dataHora' | 'curta' | 'status' | 'contagem' | 'ip';
 
 const LARGURA: Record<TipoDeColuna, string> = {
   etiqueta: 'w-36 @lg:w-44',
   relacao: 'w-[16%]',
-  rotulo: 'w-36',
-  quantidade: 'w-60',
+  // "9999 unidades", "Administrador".
+  rotulo: 'w-40',
+  // "999 compradas · 999 em uso" na linha de baixo.
+  quantidade: 'w-64',
   prazo: 'w-48',
-  data: 'w-32',
+  // A lista de licenças, que diz também "encerrada em 10/03/2026".
+  vencimento: 'w-64',
+  // `10/03/2026` com folga: na w-32 cabia por 0,02 px.
+  data: 'w-36',
   dataHora: 'w-48',
-  curta: 'w-24',
+  // A versão do agente, até "10.10.10".
+  curta: 'w-28',
   status: 'w-36 @md:w-44',
   contagem: 'w-24 text-right',
   // O IPv4 mais largo, `255.255.255.255` em mono, sem o `…` (DJ).
@@ -37,7 +43,7 @@ const LARGURA: Record<TipoDeColuna, string> = {
 };
 
 /** A partir de que largura da moldura a coluna aparece. Sem ela, aparece sempre. */
-export type ApareceEm = 'md' | 'lg' | '2xl' | '3xl' | '4xl' | '5xl';
+export type ApareceEm = 'md' | 'lg' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl';
 
 const APARECE: Record<ApareceEm, string> = {
   md: 'hidden @md:table-cell',
@@ -46,6 +52,7 @@ const APARECE: Record<ApareceEm, string> = {
   '3xl': 'hidden @3xl:table-cell',
   '4xl': 'hidden @4xl:table-cell',
   '5xl': 'hidden @5xl:table-cell',
+  '6xl': 'hidden @6xl:table-cell',
 };
 
 interface ColunaProps {

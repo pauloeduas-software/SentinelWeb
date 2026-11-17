@@ -83,9 +83,9 @@ export default function MaquinasTable({
             <TableRow>
               <TableHead>Máquina</TableHead>
               <TableHead coluna="etiqueta" aparece="lg">Computador</TableHead>
-              <TableHead coluna="ip" aparece="3xl">Endereço IP</TableHead>
+              <TableHead coluna="ip" aparece="5xl">Endereço IP</TableHead>
               <TableHead aparece="4xl">Sistema operacional</TableHead>
-              <TableHead coluna="curta" aparece="5xl">Versão</TableHead>
+              <TableHead coluna="curta" aparece="6xl">Versão</TableHead>
               <TableHead coluna="dataHora" aparece="2xl">Último contato</TableHead>
               <TableHead coluna="status">Status</TableHead>
               <TableHeadAcoes />
@@ -117,9 +117,9 @@ export default function MaquinasTable({
                       <TableLinha>—</TableLinha>
                     )}
                   </TableCell>
-                  <TableCell aparece="3xl" className="font-mono">{maquina.localIp ?? '—'}</TableCell>
+                  <TableCell aparece="5xl" className="font-mono">{maquina.localIp ?? '—'}</TableCell>
                   <TableCell aparece="4xl">{maquina.osVersion}</TableCell>
-                  <TableCell aparece="5xl" className="font-mono">{maquina.agentVersion ?? '—'}</TableCell>
+                  <TableCell aparece="6xl" className="font-mono">{maquina.agentVersion ?? '—'}</TableCell>
                   <TableCell aparece="2xl">{formatarDataHora(maquina.lastSeen)}</TableCell>
                   <TableCell>
                     <PontoDeStatus tom={online ? 'sucesso' : 'neutro'}>{online ? 'Conectado' : 'Desconectado'}</PontoDeStatus>

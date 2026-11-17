@@ -45,9 +45,9 @@ export default function LicencaTable({
         <TableHeader>
           <TableRow>
             <TableHead>Licença</TableHead>
-            <TableHead coluna="relacao" aparece="4xl">Categoria</TableHead>
-            <TableHead coluna="quantidade" aparece="3xl">Quantidade</TableHead>
-            <TableHead coluna="prazo" aparece="2xl">Vencimento</TableHead>
+            <TableHead coluna="relacao" aparece="6xl">Categoria</TableHead>
+            <TableHead coluna="quantidade" aparece="4xl">Quantidade</TableHead>
+            <TableHead coluna="vencimento" aparece="2xl">Vencimento</TableHead>
             <TableHead coluna="status">Status</TableHead>
             <TableHeadAcoes />
           </TableRow>
@@ -61,9 +61,9 @@ export default function LicencaTable({
               <TableRow key={licenca.id} onClick={() => onAbrir(licenca)} apagada={encerrada}>
                 <TableCell><TableNome>{licenca.name}</TableNome></TableCell>
 
-                <TableCell aparece="4xl">{licenca.category?.name ?? '—'}</TableCell>
+                <TableCell aparece="6xl">{licenca.category?.name ?? '—'}</TableCell>
 
-                <TableCell aparece="3xl">
+                <TableCell aparece="4xl">
                   <TableLinha>{licenca.livres} {licenca.livres === 1 ? 'livre' : 'livres'}</TableLinha>
                   <TableSublinha>{licenca.seatsTotal} {licenca.seatsTotal === 1 ? 'comprada' : 'compradas'} · {licenca.emUso} em uso</TableSublinha>
                 </TableCell>

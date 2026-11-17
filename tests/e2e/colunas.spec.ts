@@ -50,3 +50,22 @@ for (const largura of [375, 768]) {
     }
   });
 }
+
+// A soma das colunas de largura fixa passa da moldura só numa faixa estreita, entre um
+// `aparece` e o seguinte: Agentes rolava entre 620 e 630px. A moldura percorre todas.
+test('em nenhuma largura da moldura a lista rola de lado', async ({ page }) => {
+  for (const lista of LISTAS) {
+    await page.goto(lista);
+    await expect(page.getByRole('columnheader').first()).toBeVisible();
+    const rolam = await page.locator('table').first().locator('..').evaluate((elemento) => {
+      const moldura = elemento as unknown as { style: { width: string }; scrollWidth: number; clientWidth: number };
+      const larguras: number[] = [];
+      for (let largura = 340; largura <= 1400; largura += 10) {
+        moldura.style.width = `${largura}px`;
+        if (moldura.scrollWidth - moldura.clientWidth > 1) larguras.push(largura);
+      }
+      return larguras;
+    });
+    expect(rolam, lista).toEqual([]);
+  }
+});
