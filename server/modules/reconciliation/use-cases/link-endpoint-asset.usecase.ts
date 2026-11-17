@@ -14,7 +14,7 @@ import { normalizeSerial } from '../helpers/normalize-identity.helper';
 // aplicação. O que este arquivo acrescenta é a MENSAGEM (o P2002 cru viraria
 // "Registro já existe.", que não diz nada a quem está na tela) e o AuditLog.
 
-const JA_TEM_MAQUINA = 'Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Agentes.';
+const JA_TEM_MAQUINA = 'Este computador já está vinculado a outra máquina. Desvincule a outra máquina antes, em Agentes.';
 
 interface OrigemDoVinculo {
   automatico?: boolean;

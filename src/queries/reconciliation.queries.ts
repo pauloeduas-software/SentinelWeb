@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/apiClient';
 import { assetKeys } from './asset.queries';
 import { catalogKeys } from './catalog.queries';
-import { endpointKeys } from './endpoint.queries';
+import { endpointKeys, POLL_INTERVAL_MS } from './endpoint.queries';
 // Vincular E ENTREGAR muda a ficha do posto: a chave é do posto, quem pergunta
 // importa (docs/referencia/arquitetura.md).
 import { workstationKeys } from './workstation.queries';
@@ -27,6 +27,9 @@ export function useCoberturaQuery() {
   return useQuery({
     queryKey: reconciliationKeys.cobertura(),
     queryFn: async () => (await apiClient.get<Cobertura>('/reconciliation/coverage')).data,
+    // No ritmo das vistas: Com agente é o número da vista Com computador (DI), e a
+    // máquina que o handshake liga ou que vira sumida muda os dois.
+    refetchInterval: POLL_INTERVAL_MS,
   });
 }
 

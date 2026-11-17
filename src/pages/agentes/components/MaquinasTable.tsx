@@ -25,9 +25,9 @@ import type { VistaDosAgentes } from '../hooks/useAgentes';
 //
 // COM COMPUTADOR: o `⋯` desvincula.
 //
-// SEM COMPUTADOR: a série não a ligou sozinha. A linha diz por quê (o aviso do
-// servidor) ou qual computador parece ser (a dica), e o Vincular abre com ele
-// escolhido.
+// SEM COMPUTADOR: a série não a ligou sozinha, e a coluna Computador fica com o
+// traço. Qual computador ela parece ser, ou por que não ligou, está na ficha (DI),
+// e o Vincular abre com a dica escolhida.
 //
 // SUMIDOS: sem sinal há 30 dias, com computador ou sem, e cada linha com o `⋯`
 // da vista de onde veio. Na sem computador, o Excluir (DD), que também está em
@@ -53,11 +53,6 @@ const FRASE_DA_LISTA_VAZIA: Record<VistaDosAgentes, string> = {
   sumidos: 'Nenhuma máquina sem contato há mais de 30 dias.',
 };
 
-/** A sublinha da coluna Computador na máquina sem computador. */
-function pista(maquina: Endpoint): string | null {
-  if (maquina.dica) return `${maquina.dica.sinal === 'SERIE' ? 'Mesma série' : 'Mesmo nome'} que ${maquina.dica.assetTag}`;
-  return maquina.aviso;
-}
 
 export default function MaquinasTable({
   vista, lista, carregando, erro, ocupado, onVincular, onDesvincular, onExcluir,
@@ -96,10 +91,9 @@ export default function MaquinasTable({
           <TableBody>
             {lista.visiveis.map((maquina) => {
               // `asset` pode faltar na vista Com computador só na linha que o
-              // `SetNull` desfez entre duas revalidações: ela mostra a pista, como a sem computador.
+              // `SetNull` desfez entre duas revalidações: ela mostra o traço, como a sem computador.
               const { asset } = maquina;
               const online = maquina.status === 'ONLINE';
-              const sublinha = asset ? asset.serial : pista(maquina);
 
               return (
                 <TableRow
@@ -111,8 +105,14 @@ export default function MaquinasTable({
                     {maquina.biosSerial && <TableSublinha className="font-mono">{maquina.biosSerial}</TableSublinha>}
                   </TableCell>
                   <TableCell aparece="lg">
-                    <TableLinha className={asset ? 'font-mono text-text-primary' : undefined}>{asset ? asset.assetTag : '—'}</TableLinha>
-                    {sublinha && <TableSublinha className={asset ? 'font-mono' : undefined}>{sublinha}</TableSublinha>}
+                    {asset ? (
+                      <>
+                        <TableLinha className="font-mono text-text-primary">{asset.assetTag}</TableLinha>
+                        {asset.serial && <TableSublinha className="font-mono">{asset.serial}</TableSublinha>}
+                      </>
+                    ) : (
+                      <TableLinha>—</TableLinha>
+                    )}
                   </TableCell>
                   <TableCell aparece="4xl">{maquina.osVersion}</TableCell>
                   <TableCell aparece="5xl" className="font-mono">{maquina.agentVersion ?? '—'}</TableCell>

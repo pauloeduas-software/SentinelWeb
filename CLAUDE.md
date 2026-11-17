@@ -113,9 +113,9 @@ Decidido; não proponha de novo:
   release-please e o shadcn/ui inteiro.
 
 **Fechados:** licença, estoque, Configurações, Colaboradores, Usuários, os cargos (AV, também contra
-o Lansweeper), Postos (AW e AX, também contra Shelf.nu, ServiceNow e iTop) e Computadores (CL a CQ,
-também contra ServiceNow, Shelf.nu, NinjaOne, Lansweeper e iTop) foram validados contra GLPI e
-Snipe-IT. Só se corrige bug e texto falso; regra nova, só a pedido.
+o Lansweeper), Postos (AW e AX, também contra Shelf.nu, ServiceNow e iTop), Computadores (CL a CQ,
+também contra ServiceNow, Shelf.nu, NinjaOne, Lansweeper e iTop) e Agentes (DC a DF e DI, também contra
+Fleet, NinjaOne, Lansweeper, ServiceNow e Intune) foram validados contra GLPI e Snipe-IT. Só se corrige bug e texto falso; regra nova, só a pedido.
 
 ## Docs e commits
 

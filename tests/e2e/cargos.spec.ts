@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Browser } from '@playwright/test';
 import { criarAtivo, criarColaborador, criarItem, criarLicenca, criarPosto, tituloDaPagina, vigiarConsole } from './helpers';
+import { prisma } from '../../server/infra/database/prismaClient';
 
 // OS CARGOS NA TELA (AV): o menu mostra o que o cargo alcança, e a URL digitada
 // do que ele não alcança volta para a raiz. Quem autoriza é o servidor
@@ -155,6 +156,26 @@ test('na ficha, o Supervisor desativa, encerra e exclui', async ({ browser, requ
   await page.getByRole('button', { name: `Ações de ${nomeDaLicenca}` }).click();
   await expect(page.getByRole('menuitem', { name: 'Encerrar' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Excluir' })).toBeVisible();
+
+  await fechar();
+});
+
+test('na máquina sem computador, o Técnico vincula, e o Excluir não aparece', async ({ browser, request }) => {
+  const hostname = `NB-CARGO-${Date.now()}`;
+  // A máquina nasce do handshake do agente, que o navegador não faz: vai direto ao banco.
+  const { id } = await prisma.endpoint.create({ data: { hwid: `hw-${hostname}`, hostname, osVersion: 'Windows 11' } });
+  const { page, fechar } = await entrarComo(browser, request, 'TECNICO');
+  const principal = page.getByRole('main');
+
+  await page.goto(`/agentes?vista=sem&busca=${hostname}`);
+  await principal.getByRole('button', { name: `Ações de ${hostname}` }).click();
+  await expect(page.getByRole('menuitem', { name: 'Vincular a um computador' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Excluir' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await page.goto(`/agentes/${id}`);
+  await expect(principal.getByRole('button', { name: 'Vincular a um computador' }).first()).toBeVisible();
+  await expect(principal.getByRole('button', { name: `Ações de ${hostname}` })).toHaveCount(0);
 
   await fechar();
 });

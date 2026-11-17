@@ -113,6 +113,25 @@ describe('as vistas', () => {
     expect(body.sumidos).toBe((await listar('?vista=sumidos')).body.total);
   });
 
+  it('o computador da máquina sumida conta como Sem agente, e Com agente é o número da vista Com computador (DI)', async () => {
+    const vinculada = await maquina('cobertura-sumida');
+    const ativo = await criarAtivo(api, { statusId, modelId, name: 'Ativo da cobertura' });
+    await api.post(`/api/endpoints/${vinculada}/link`, { assetId: ativo.id });
+
+    type Cobertura = { cadastrados: number; comAgente: number; semAgente: number };
+    const antes = (await api.get<Cobertura>('/api/reconciliation/coverage')).body;
+    expect(antes.comAgente).toBe((await listar('?vista=com')).body.total);
+
+    const ha31Dias = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    await prisma.endpoint.update({ where: { id: vinculada }, data: { lastSeen: ha31Dias } });
+
+    const depois = (await api.get<Cobertura>('/api/reconciliation/coverage')).body;
+    expect(depois.comAgente).toBe(antes.comAgente - 1);
+    expect(depois.semAgente).toBe(antes.semAgente + 1);
+    expect(depois.comAgente + depois.semAgente).toBe(depois.cadastrados);
+    expect(depois.comAgente).toBe((await listar('?vista=com')).body.total);
+  });
+
   it('convive com paginação e busca na MESMA query', async () => {
     // O caso que o defeito tornava impossível: as chaves dos dois donos juntas.
     // Com a query entregue inteira aos dois schemas, isto dava 422 de um lado ou

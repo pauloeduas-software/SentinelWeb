@@ -83,6 +83,9 @@ export default function VincularMaquinaForm({ maquina, ocupado, onVincular, onCa
           rota="assets"
           parametros={{ maquina: 'sem' }}
           valor={assetId}
+          // A dica com a etiqueta: além das 200 primeiras opções, o campo não
+          // diria qual computador já vem escolhido.
+          atual={maquina.dica && { id: maquina.dica.id, name: maquina.dica.assetTag }}
           obrigatorio
           onChange={setAssetId}
         />

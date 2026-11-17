@@ -22,7 +22,7 @@ export type VistaDosAgentes = typeof VISTAS[number];
 function textoDaMaquina(maquina: Endpoint): string {
   return [
     maquina.hostname, maquina.osVersion, maquina.biosSerial, maquina.agentVersion,
-    maquina.asset?.assetTag, maquina.asset?.name, maquina.asset?.serial, maquina.dica?.assetTag,
+    maquina.asset?.assetTag, maquina.asset?.name, maquina.asset?.serial,
   ].filter(Boolean).join(' ');
 }
 

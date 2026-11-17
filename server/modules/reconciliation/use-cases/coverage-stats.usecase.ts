@@ -11,8 +11,13 @@ import { DIAS_SEM_CONTATO, limiteDeSumido } from '../../endpoint/helpers/endpoin
 export interface Cobertura {
   /** Ativos vivos no patrimônio (fora da lixeira e não baixados). */
   cadastrados: number;
-  /** Desses, quantos têm máquina vinculada. */
+  /**
+   * Desses, quantos têm máquina vinculada que deu sinal nos últimos
+   * `DIAS_SEM_CONTATO`: o número da vista Com computador (DI). A máquina sumida
+   * não cobre o computador, como o "missing" do Fleet.
+   */
   comAgente: number;
+  /** O resto: sem máquina, ou com a máquina sumida. */
   semAgente: number;
   /**
    * As MÁQUINAS sem sinal há mais de `DIAS_SEM_CONTATO`, com computador ou sem: o
@@ -36,11 +41,13 @@ export async function calcularCobertura(): Promise<Cobertura> {
   // patrimônio de propósito, e contá-lo como falha de cobertura encheria o
   // painel de acertos contábeis (D19).
   const vivos = SEM_BAIXA;
+  // Um instante só para os dois cortes: a máquina na fronteira não conta duas vezes.
+  const limite = limiteDeSumido();
 
   const [cadastrados, comAgente, sumidos] = await prisma.$transaction([
     prisma.asset.count({ where: vivos }),
-    prisma.asset.count({ where: { ...vivos, endpoint: { isNot: null } } }),
-    prisma.endpoint.count({ where: { lastSeen: { lt: limiteDeSumido() } } }),
+    prisma.asset.count({ where: { ...vivos, endpoint: { is: { lastSeen: { gte: limite } } } } }),
+    prisma.endpoint.count({ where: { lastSeen: { lt: limite } } }),
   ]);
 
   return { cadastrados, comAgente, semAgente: cadastrados - comAgente, sumidos, diasSemContato: DIAS_SEM_CONTATO };

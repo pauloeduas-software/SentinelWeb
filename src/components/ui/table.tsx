@@ -28,9 +28,9 @@ const LARGURA: Record<TipoDeColuna, string> = {
   quantidade: 'w-60',
   prazo: 'w-48',
   data: 'w-32',
-  dataHora: 'w-40',
+  dataHora: 'w-48',
   curta: 'w-24',
-  status: 'w-36',
+  status: 'w-36 @md:w-44',
   contagem: 'w-24 text-right',
 };
 

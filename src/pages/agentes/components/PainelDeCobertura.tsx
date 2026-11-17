@@ -33,7 +33,7 @@ function numeros(cobertura: Cobertura | undefined): Numero[] {
     {
       rotulo: 'Sem agente',
       valor: cobertura?.semAgente,
-      ajuda: 'cadastrados sem máquina vinculada',
+      ajuda: 'cadastrados sem máquina, ou com ela sumida',
     },
     {
       rotulo: 'Sumidos',

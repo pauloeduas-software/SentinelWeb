@@ -6,7 +6,7 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB/DC/DD/DE/DF da segunda rodada (ver
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB/DC/DD/DE/DF/DI da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)).
 
 ---
@@ -1168,6 +1168,8 @@ serial de produto deixa de não ter identidade.
 
 ## CW — Descobertas perde a triagem, os Ociosos e os números repetidos
 
+> **Superada em parte por [DI](#di--agentes-fechada-e-com-agente-é-o-número-da-vista-com-computador):** Sem agente conta também o computador da máquina sumida.
+
 > **Superada em parte por [DD](#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** os Sumidos contam as máquinas, e não os computadores.
 
 > **Superada em parte por [DA](#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai):** a série, o fabricante e o modelo voltam para a aba Máquina, com as placas de vídeo.
@@ -1364,6 +1366,8 @@ que o agente manda, e só isso.
 
 ## DC — Descobertas vira Agentes, e a série liga a máquina sozinha
 
+> **Superada em parte por [DI](#di--agentes-fechada-e-com-agente-é-o-número-da-vista-com-computador):** a coluna Computador da lista fica com o traço, e a dica e o aviso vão para a ficha.
+
 > **Superada em parte por [DD](#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** Agentes ganha a vista Sumidos, e a máquina sem computador ganha o Excluir.
 
 > **Supera:** [D51](#d51--auto-provisionamento-nasce-em-suggest) e [D112](#d112--discoverymode--off-desliga-a-descoberta)
@@ -1527,3 +1531,39 @@ vista.
 **O que fica de fora, declarado:** a aba Histórico. O vínculo e a exclusão já estão na auditoria e no histórico do
 computador, e a máquina não tem outro evento que alguém consulte.
 
+
+---
+
+## DI — Agentes fechada, e Com agente é o número da vista Com computador
+
+> **Supera em parte:** [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos) (o Sem agente só
+> como o computador sem máquina).
+
+**Decisão** (2026-11-17, na passada que fechou Agentes):
+
+- **Com agente conta o computador com máquina que deu sinal nos últimos 30 dias,** o mesmo corte dos Sumidos. Passa
+  a ser o número da vista Com computador. **Sem agente** é o resto dos cadastrados, sem máquina ou com ela sumida, e
+  a frase do cartão diz isso: "cadastrados sem máquina, ou com ela sumida".
+- **A recusa da invariante 12 diz "Desvincule a outra máquina antes, em Agentes."**, o verbo da baixa e do Excluir.
+- **O Vincular se chama "Vincular a um computador"** no card da ficha, como no `⋯` da lista e na aba Computador, e o
+  da aba espera a ação em andamento, como os outros dois.
+- **O seletor do Vincular mostra a etiqueta do computador da dica** quando ele está além das 200 primeiras opções.
+  Antes, o campo dizia "Vínculo atual", que a máquina sem computador não tem.
+- **Na máquina sem computador, a coluna Computador fica com o traço,** e a busca da lista não acha a máquina pela
+  etiqueta da dica. A frase "Mesma série que ATV-00012" e o aviso não cabiam na largura da etiqueta e saíam
+  cortados; a lista de agentes do GLPI também mostra só o item ligado.
+- **Qual computador a máquina parece ser, ou por que a série não a ligou, vai para um aviso na ficha,** entre o card
+  e as abas, à vista em todas elas, como o aviso da baixa no computador (BR). Antes estava só no vazio da aba
+  Computador, que fica com a frase e o Vincular.
+- **A coluna fica "Computador" em Agentes,** e "Etiqueta" em Postos, o que a [DH](./plataforma.md#dh--a-coluna-aparece-quando-cabe)
+  deixou de fora. Em Agentes a coluna é a ligação com outro registro, e as vistas se chamam Com computador e Sem
+  computador.
+
+**Por quê:** a máquina sumida não cobre o computador, como o "missing" do Fleet, que sai da contagem dos hosts vistos.
+Com o corte, o cartão e a vista dizem o mesmo número, e Com agente mais Sem agente continuam somando os cadastrados.
+
+**O que fica diferente, de propósito:** Sem agente conta computadores, e a vista Sem computador conta máquinas. As
+frases dos cartões dizem o que cada um conta.
+
+**A tela fecha:** a lista, a ficha, o vínculo, o Excluir e as vistas foram conferidos no código e nos testes, e
+`tests/e2e/agentes.spec.ts` cobre pela tela o Vincular, o Vincular e entregar, os Sumidos e o link morto.

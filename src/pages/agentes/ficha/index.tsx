@@ -1,5 +1,6 @@
 import { Cpu, Link2, Monitor, Trash2, Unlink } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import AvisoDoVinculo from './components/AvisoDoVinculo';
 import ComputadorTab from './components/ComputadorTab';
 import IdentificacaoDaMaquina from './components/IdentificacaoDaMaquina';
 import { useFichaDaMaquina } from './hooks/useFichaDaMaquina';
@@ -60,7 +61,7 @@ function FichaDaMaquina() {
             <Button variant="outline" size="sm" disabled={ocupado} onClick={() => void handleDesvincular()}><Unlink /> Desvincular</Button>
           ) : (
             <>
-              <Button size="sm" disabled={ocupado} onClick={abrirVinculo}><Link2 /> Vincular</Button>
+              <Button size="sm" disabled={ocupado} onClick={abrirVinculo}><Link2 /> Vincular a um computador</Button>
               {/* A máquina com computador desvincula antes de excluir (DD): o item nem aparece. */}
               {podeExcluir && (
                 <AcoesDaLinha
@@ -72,6 +73,8 @@ function FichaDaMaquina() {
           )}
         />
 
+        <AvisoDoVinculo maquina={maquina} />
+
         <Tabs value={aba} onValueChange={(valor) => setAba(valor as typeof aba)}>
           <TabsList>
             <TabsTrigger value="computador"><Monitor /> Computador</TabsTrigger>
@@ -79,7 +82,7 @@ function FichaDaMaquina() {
           </TabsList>
 
           <TabsContent value="computador" className="mt-4 space-y-4">
-            <ComputadorTab maquina={maquina} onVincular={abrirVinculo} />
+            <ComputadorTab maquina={maquina} ocupado={ocupado} onVincular={abrirVinculo} />
           </TabsContent>
 
           <TabsContent value="maquina" className="mt-4 space-y-4">

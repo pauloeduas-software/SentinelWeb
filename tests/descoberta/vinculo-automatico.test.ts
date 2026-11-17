@@ -203,7 +203,7 @@ describe('o vínculo à mão', () => {
 
     // 409 do `endpoints.assetId @unique`, traduzido, apontando o Desvincular de Agentes.
     expect(status).toBe(409);
-    expect(body.error).toBe('Este computador já está vinculado a outra máquina. Desfaça aquele vínculo antes, em Agentes.');
+    expect(body.error).toBe('Este computador já está vinculado a outra máquina. Desvincule a outra máquina antes, em Agentes.');
   });
 });
 

@@ -171,7 +171,7 @@ export async function buildApp(
 
   await server.register(cors, { origin: getCorsOrigins(), credentials: true });
 
-  // Teto de requisições por IP. O painel consulta /api/endpoints a cada 5s (12/min)
+  // Teto de requisições por IP. O painel consulta /api/endpoints a cada 30s (2/min por lista)
   // mais as listagens, então 300/min sobra para uso normal e corta repetição
   // automatizada. Rotas de escrita têm teto próprio, mais baixo, nos maestros.
   //
