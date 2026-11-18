@@ -13,13 +13,12 @@ import { sanitizeHwid } from '../helpers/hwid.helper';
 // A ROTA ESPERA A RESPOSTA, e não só o envio: o pedido sai como um comando
 // `REFRESH`, e ela volta quando o handshake e a telemetria que ele provocou
 // estiverem gravados. Quem clicou sabe se deu certo, e a ficha relida já mostra
-// o dado novo. É o que a A23 do agente cobrava de toda ação nova: sem resposta,
-// o painel nem saberia se ela rodou.
+// o dado novo. Sem resposta, o painel nem saberia se ela rodou.
 //
 // Estado de processo, como o `agent.registry`: o agente que responde está
 // conectado a ESTE processo, e é nele que a resposta chega.
 
-/** O agente que entende o `REFRESH` (A26 de lá). O anterior o recusa no log. */
+/** O agente que entende o `REFRESH`. O anterior o recusa no log. */
 export const VERSAO_QUE_ATUALIZA = '0.2.0';
 
 /** O agente lê o inventário em menos de um segundo; 15 s cobre a rede lenta. */
@@ -51,7 +50,7 @@ export function registrarRespostaDoAgente(hwid: string, tipo: Resposta): void {
   if (espera.faltam.size === 0) espera.acordar(null);
 }
 
-/** `0.2.0` ou mais nova. A versão nula é a do agente anterior à A25. */
+/** `0.2.0` ou mais nova. A versão nula é a do agente que não a manda. */
 function entendeORefresh(versao: string | null): boolean {
   const lida = versao?.match(/^(\d+)\.(\d+)\.(\d+)/)?.slice(1).map(Number);
   if (!lida) return false;

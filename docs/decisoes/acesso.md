@@ -1175,12 +1175,9 @@ saindo uma vez só.
 é por HWID, e a conexão nova substitui a velha: bastava mandar o handshake com o HWID de outra para tomar o lugar
 dela, receber os comandos dela e gravar telemetria no nome dela. Agora o token diz qual máquina está do outro lado, e
 uma máquina comprometida não fala por nenhuma outra. O segredo único continua existindo, mas sai da conversa do dia a
-dia: trafega uma vez por máquina, e o agente o apaga depois de usar.
+dia: trafega uma vez por máquina.
 
-A pesquisa que levou a isto foi feita no código de cada agente e está na decisão A11 do repositório do agente
-(`docs/decisoes/protocolo.md` do SentinelAgente), com o arquivo de cada projeto.
-
-**O custo:** uma tabela (`agent_credentials`), uma rota, um comando de linha e o cadastro no agente. Não há
+**O custo:** uma tabela (`agent_credentials`), uma rota e um comando de linha. Não há
 convivência com o token antigo, ao contrário do que o D89 pedia: o agente antigo não mandava token nenhum, e o
 novo já nasce cadastrando. Não há frota para derrubar.
 
@@ -1204,11 +1201,10 @@ novo já nasce cadastrando. Não há frota para derrubar.
 **Por quê:** a mensagem descartada deixava a conexão aberta, e o agente não tinha como saber. O HWID muda depois do
 cadastro quando a placa-mãe é trocada, quando a BIOS passa a preencher o serial, ou quando o token vai junto numa
 imagem clonada: a máquina conectava, mandava `Ping` para o vazio e ficava OFFLINE no painel para sempre, com o
-journal dizendo "Conectado". Com o 1008 o SentinelAgente para de insistir e diz no log que precisa de recadastro (a
-A11 de lá: ele não se recadastra sozinho).
+journal dizendo "Conectado". Com o 1008, o agente fica sabendo por que a conexão fechou.
 
 **O que ficou de fora.**
 - **O socket meio aberto.** Quando a rede cai sem fechar, o `isAgentConnected` continua vendo a conexão velha `OPEN`
-  até o sistema operacional desistir dela, e o recadastro dessa máquina responde 409. O SentinelAgente contorna: com
-  token gravado, ele conecta com o token, e a conexão nova substitui a velha. Pingar os sockets daqui resolveria na
+  até o sistema operacional desistir dela, e o recadastro dessa máquina responde 409. A conexão nova com o token
+  substitui a velha. Pingar os sockets daqui resolveria na
   raiz, e fica para quando aparecer o caso.

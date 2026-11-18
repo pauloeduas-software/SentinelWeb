@@ -1065,18 +1065,16 @@ computador, e o Snipe-IT, com as integrações de RMM, o MAC, o IP e o sistema.
 
 ## CS — A máquina calada vira OFFLINE em 2 minutos
 
-**Decisão.** Os tempos do agente e do servidor, tirados do Tactical RMM e do Fleet:
+**Decisão.** Os tempos do servidor, tirados do Fleet e do Remotely, com o `Ping` que chega do agente
+([agente.md](../referencia/agente.md)):
 
 | | Valor | De onde |
 |---|---|---|
-| `Ping` do agente | sorteado entre 30 e 60 s | Tactical RMM: o `checkin_hello` de 30 a 60 s (`api/tacticalrmm/apiv3/utils.py`) |
 | OFFLINE sem mensagem | **2 minutos**: o maior intervalo do `Ping` mais 60 s | Fleet: o intervalo de check-in mais `OnlineIntervalBuffer = 60` (`server/fleet/hosts.go`) |
 | OFFLINE quando a conexão fecha | na hora (continua) | Remotely: `OnDisconnectedAsync` em `Server/Hubs/AgentHub.cs` |
-| Telemetria | de hora em hora | Fleet: `detail_update_interval` de 1 h (`server/config/config.go`) |
 
 - **Só o `STALE_AFTER_MS` muda aqui**, de 4 para 2 minutos (`mark-stale-endpoints-offline.usecase.ts`). O job
   continua a cada 60 s, então a máquina que caiu sem fechar a conexão aparece OFFLINE entre 2 e 3 minutos depois.
-- **O ritmo é do agente:** o `Ping` e a telemetria estão no SentinelAgente. O servidor não impõe nenhum dos dois.
 
 **Por quê:** os dois separam o sinal de vida, leve e frequente, da coleta pesada, que vai de vez em quando. Com a
 telemetria de hora em hora, é o `Ping` que mantém a máquina ONLINE, e o limite segue a regra do Fleet: o intervalo
@@ -1089,7 +1087,6 @@ jeito, e só deixaria o painel mostrar ONLINE uma máquina sem energia.
 - **Um estado de "sumido"**, como o `overdue` de 30 minutos do Tactical RMM. Lá ele existe para mandar alerta por
   e-mail ou SMS, e aqui não há alerta de máquina. O sumido de longo prazo já é o fantasma do painel de cobertura
   (`ghostDays`, 30 dias), o mesmo papel do `missing` do Fleet.
-- **As checagens** do Tactical RMM (CPU, disco e serviço a cada 120 s, com alerta): o SentinelAgente não as terá.
 
 ---
 
@@ -1110,8 +1107,7 @@ jeito, e só deixaria o painel mostrar ONLINE uma máquina sem energia.
   imprime o `product_uuid` com os primeiros campos invertidos (`drivers/firmware/dmi_scan.c`, `dmi_save_uuid`), e o
   `03000200-0400-0500-0006-000700080009` da AMI aparece como `00020003-0004-0005-0006-000700080009`.
 
-**Por quê:** o SentinelAgente faz o HWID com o serial sem `-`, `:` e espaço, e usa esta mesma lista (a A13 de lá).
-Com a limpeza olhando o valor com separadores, `0000-0000` passava nos dois lados: toda máquina com ele ganhava o
+**Por quê:** com a limpeza olhando o valor com separadores, `0000-0000` passava: toda máquina com ele ganhava o
 mesmo HWID e casava com o mesmo computador por 100 pontos. Nenhuma máquina tem ainda token do agente novo, então
 esta é a hora de fechar a lista: depois, mudá-la muda o HWID de máquina cadastrada.
 
@@ -1124,8 +1120,8 @@ Juntar os dois mudaria o vínculo de computador que já existe, e não há caso 
 
 > **Supera em parte:** [H](#h--a-fusão-de-máquinas-sai) (a premissa de que o `hwid` é estável entre reinstalações).
 
-**Decisão.** O `hwid` passa a ser **o id da instalação do agente**, e não da máquina: o SentinelAgente o sorteia no
-primeiro arranque e o perde quando o disco é formatado ou o pacote é purgado (a A20 de lá). Quem diz que a máquina é a
+**Decisão.** O `hwid` passa a ser **o id da instalação do agente**, e não da máquina: a máquina formatada chega com
+outro ([agente.md](../referencia/agente.md)). Quem diz que a máquina é a
 mesma é o firmware do handshake. Quando chega um `hwid` que o servidor nunca viu, `herdarMaquinaReinstalada`
 (`server/modules/endpoint/use-cases/adopt-reinstalled-endpoint.usecase.ts`) procura a máquina conhecida com as regras
 de importação do GLPI, na mesma ordem (`RuleImportAsset.xml`):
@@ -1153,7 +1149,7 @@ handshake segue como atualização: a mudança de hardware compara com o que a m
   apague o registro antigo).
 
 **Por quê:** um `hwid` derivado do firmware não era imutável de verdade: ele muda com a placa-mãe, com o serial que a
-BIOS passa a preencher e com cada revisão da regra (a A15 do agente já o fez uma vez), e cada mudança deixava duas
+BIOS passa a preencher e com cada revisão da regra, e cada mudança deixava duas
 linhas para a mesma máquina sem ferramenta para juntá-las, porque a H tinha tirado a fusão. Os sistemas de inventário
 olhados separam as duas perguntas. O agente do GLPI se identifica com um id sorteado e guardado em disco (`agentid`,
 `deviceid`, em `lib/GLPI/Agent.pm`), e o servidor decide qual computador é pelas regras de importação, apontando o
@@ -1178,7 +1174,7 @@ serial de produto deixa de não ter identidade.
 > e [D118](#d118--a-configuração-da-descoberta-ganha-tela-e-a-allowlist-com-ela) (em parte: o `shadowHours`);
 > [BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino) (em parte: o Conhecido e o Não autorizado).
 
-**Decisão** (2026-11-15, olhando a tela contra o SentinelAgente depois da A20 de lá):
+**Decisão** (2026-11-15, olhando a tela contra o que o SentinelAgente manda):
 
 - **A triagem sai.** Saem os itens "Marcar como conhecida" e "Marcar como não autorizada", a coluna Status de Sem
   vínculo, o card Shadow IT, o campo `shadowHours`, a coluna `endpoints.reviewState` com o enum `ReviewState` e a
@@ -1195,16 +1191,15 @@ serial de produto deixa de não ter identidade.
   falta cadastrar, e "Não autorizado" não bloqueava nada, só pintava o ponto de vermelho. A máquina que não é da
   empresa sai revogando o token (`bun run agente:revogar`). Nem o GLPI nem o Snipe-IT triam máquina com agente. O
   "não gerenciado" do GLPI é o que a varredura de rede acha sem agente.
-- **Ociosos repetia os Sumidos com outro nome.** O uso era contado pela telemetria que chega, e o SentinelAgente
-  manda uma amostra por hora ([A12](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a12--os-tempos-telemetria-de-hora-em-hora-e-ping-de-30-a-60-s))
-  sem o usuário logado (A8 de lá). "Ocioso" virava "não ligou em 30 dias", que é o Sumidos com o mesmo prazo, e o
+- **Ociosos repetia os Sumidos com outro nome.** O uso era contado pela telemetria que chega, uma amostra por hora
+  e sem o usuário logado. "Ocioso" virava "não ligou em 30 dias", que é o Sumidos com o mesmo prazo, e o
   "Último uso" mostrava a última leitura, não o último uso.
 - **Os números repetidos:** Sem vínculo é a contagem da aba logo embaixo, e Nunca vistos dá quase sempre o mesmo que
   Sem agente, porque o computador que nenhum agente viu é o que não tem máquina.
 
 **O que ficou de fora.**
 - **A aba Máquina** continua mostrando o que a [CP](#cp--a-aba-máquina-mostra-o-sistema-o-processador-o-ip-e-o-mac)
-  escolheu. Desde a A20 o agente também manda série, UUID, fabricante, modelo e memória, mas mostrá-los é regra nova
+  escolheu. A série, o UUID, o fabricante, o modelo e a memória também chegam, mas mostrá-los é regra nova
   em Computadores, que está fechada.
 - **Uso de verdade** (horas com alguém na máquina) pede o usuário logado ou a atividade de teclado, que o agente não
   manda.
@@ -1227,7 +1222,7 @@ serial de produto deixa de não ter identidade.
 
 **Por quê:** nenhuma frase em inglês chega a quem usa, e o Status vai no masculino ([BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino)).
 "Reconciliar" é o nome do processo, que a tela já tinha evitado no título. "Fantasma" é gíria de ferramenta, não
-Status. E desde a A20 o `BiosSerial` pode vir do serial da placa, então "da BIOS" deixou de ser verdade.
+Status. E o `BiosSerial` pode vir do serial da placa, então "da BIOS" deixou de ser verdade.
 
 **O que não muda:** os valores da API (`ONLINE`, `OFFLINE`), as rotas e o `ghostDays`.
 
@@ -1257,7 +1252,7 @@ Status. E desde a A20 o `BiosSerial` pode vir do serial da placa, então "da BIO
   erro, como já era com o `Gpus`; o teste do handshake continua mandando `InstalledSoftware` e `Gpus` para provar isso.
 
 **Por quê:**
-- **O SentinelAgente não manda `ChassisType` nem `DiskTotalBytes`** (A14 de lá), e nenhuma tela mostrava os dois.
+- **O SentinelAgente não manda `ChassisType` nem `DiskTotalBytes`**, e nenhuma tela mostrava os dois.
 - **O agente que mandava camelCase e os nomes antigos não conecta mais:** desde a
   [CR](./acesso.md#cr--cada-máquina-tem-o-seu-token-e-o-segredo-único-só-cadastra) o hub pede o token da máquina, que
   ele não tem. O "agente em campo" que o A, o G e o Q protegiam deixou de existir.
@@ -1301,7 +1296,7 @@ na [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos), e 
 **Decisão** (2026-11-15, revendo Descobertas e a aba Máquina contra o SentinelAgente depois da CW, da CY e da CZ):
 
 - **A aba Máquina mostra o que a máquina diz de si:** fabricante, modelo, série, sistema, processador, IP, MAC,
-  as placas de vídeo e o HWID, num quadro só. As placas (`Gpus`, A22 do agente) passam a ser guardadas em
+  as placas de vídeo e o HWID, num quadro só. As placas (`Gpus`) passam a ser guardadas em
   `endpoints.gpus`, a lista como veio, e aparecem com o nome e a memória. O UUID fica de fora da tela: só a
   reconciliação o usa.
 - **Saem a tabela `asset_changes`, a comparação do handshake e a coluna `endpoints.ramTotalBytes`.** A memória total
@@ -1318,7 +1313,7 @@ na [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos), e 
   A hora da leitura só aparece quando é de um minuto ou mais antes do último contato.
 
 **Por quê:**
-- **O agente revisto manda o inventário de verdade** (A14, A20 e A22 de lá), e a CW deixou de mostrá-lo só porque
+- **O agente revisto manda o inventário de verdade**, e a CW deixou de mostrá-lo só porque
   Computadores estava fechada. No posto, a aba é o único lugar em que o fabricante e o modelo da máquina aparecem;
   no computador, eles se conferem com o cadastro. O GLPI mostra os mesmos campos, com as placas de vídeo.
 - **A `AssetChange` não tinha leitor.** A BY tirou as mudanças da aba e deixou a tabela "sem leitor na tela até o
@@ -1326,9 +1321,8 @@ na [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos), e 
 - **A série da telemetria não tinha leitor** desde que a agregação de uso saiu com os Ociosos (CW): as duas telas
   mostram só a última amostra.
 - **A resposta das máquinas mandava a linha inteira**, e a tela lia metade. É o critério da CZ.
-- **O que muda mais depressa é o último contato**, a cada Ping de 30 a 60 s
-  ([A12](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a12--os-tempos-telemetria-de-hora-em-hora-e-ping-de-30-a-60-s)
-  de lá); a telemetria chega de hora em hora, e o Desconectado leva uns 3 minutos
+- **O que muda mais depressa é o último contato**, a cada Ping de 30 a
+  60 s; a telemetria chega de hora em hora, e o Desconectado leva uns 3 minutos
   ([CS](#cs--a-máquina-calada-vira-offline-em-2-minutos)). Reler a cada 5 s trazia o mesmo dado.
 - **A hora da leitura repetia o último contato** quando a leitura foi a última coisa que a máquina mandou, que é o
   caso da máquina desconectada.
@@ -1360,7 +1354,7 @@ instalados, que pedem uma lista própria. Voltam só com a tela que os leia.
 - **Sai o teste do handshake com `RamTotalBytes` e `InstalledSoftware`,** que provava que o servidor ignora os dois.
 
 **Por quê:** o SentinelAgente manda na telemetria só `CpuUsagePercentage`, `RamTotalBytes`, `RamUsedBytes` e `Disks`,
-e a A24 de lá tirou do handshake os programas instalados e a RAM. Os dois quadros mostravam zero e "A leitura não trouxe
+e o handshake não traz mais os programas instalados nem a RAM. Os dois quadros mostravam zero e "A leitura não trouxe
 processos." em toda máquina, e o teste provava um caso que o agente não produz mais. É o critério da CY: o servidor lê o
 que o agente manda, e só isso.
 
@@ -1433,7 +1427,7 @@ o NinjaOne, o Freshservice, o Intune e o Jamf):
 **O que fica de fora, declarado:**
 - **Criar o computador sozinho**, que o GLPI faz quando nada casa: aqui o computador exige o modelo do catálogo e gasta
   uma etiqueta da sequência, o motivo da D51. A máquina fica em Sem computador.
-- **A série da placa-mãe** que o agente manda quando a do produto vem de fábrica (A20 de lá) não bate com a da
+- **A série da placa-mãe** que o agente manda quando a do produto vem de fábrica não bate com a da
   etiqueta digitada no cadastro: essa máquina se vincula à mão.
 - **A troca de placa-mãe com a série regravada** entra como máquina nova, com o aviso de que o computador já tem a
   máquina antiga: desvincula-se a antiga e vincula-se a nova.
@@ -1481,26 +1475,20 @@ o NinjaOne, o Freshservice, o Intune e o Jamf):
 **O que fica de fora, declarado:**
 - **A limpeza automática dos sumidos** (a "host expiry" do Fleet, as "cleanup rules" do Intune): apagaria sozinha a
   máquina que só estava guardada numa gaveta. Com o Excluir à mão, a decisão fica com quem conhece o parque.
-- **A versão do agente na lista e o inventário diário** começam no SentinelAgente, que ainda não manda a versão nem
-  repete o handshake. Feitos na [DE](#de--a-lista-de-agentes-mostra-a-versão-do-agente).
 
 ---
 
 ## DE — A lista de Agentes mostra a versão do agente
 
-**Decisão** (2026-11-16, com a [A25](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a25--o-handshake-leva-a-versão-do-agente-e-vai-de-novo-uma-vez-por-dia)
-do SentinelAgente):
+**Decisão** (2026-11-16, quando o handshake passou a trazer a versão do agente):
 
 - **O handshake ganha `AgentVersion`,** gravado em `endpoints.agentVersion`. O handshake sem ele **apaga** a versão
-  gravada, ao contrário da série: é um agente anterior à A25, e a versão de antes mentiria.
+  gravada, ao contrário da série: é um agente que não manda a versão, e a de antes mentiria.
 - **A lista de Agentes tem a coluna Versão do agente,** e a busca a encontra. A aba Máquina mostra a versão junto do
   resto do que a máquina diz de si.
-- **O agente manda o handshake de novo uma vez por dia,** com a conexão de pé. O servidor não muda nada para isso: o
-  handshake repetido atualiza a máquina e roda o vínculo pela série, como o da conexão.
 
 **Por quê:** depois de uma atualização do agente, a versão é o que diz quem ficou para trás; o GLPI, o Fleet e o
-NinjaOne mostram a coluna. E sem o reenvio diário, numa máquina sempre ligada a peça trocada e o IP novo só chegavam
-na próxima reconexão.
+NinjaOne mostram a coluna.
 
 **O que fica de fora, declarado:** marcar a versão velha com cor ou aviso. Com um pacote só, a coluna e a busca
 bastam para achar quem não atualizou.
@@ -1596,8 +1584,7 @@ na lista de hosts.
 **Decisão** (2026-11-17, pedida comparando Agentes com o GLPI, o Fleet, o Intune e o Lansweeper):
 
 - **O `⋯` da ficha da máquina e o da linha de Agentes ganham Atualizar agora.** O servidor manda o comando
-  `REFRESH`, e o SentinelAgente 0.2.0 responde com o handshake e uma amostra de telemetria
-  ([A26](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a26--o-refresh-manda-o-inventário-e-a-telemetria-na-hora-a-pedido-do-painel) de lá).
+  `REFRESH`, e o agente responde com o handshake e uma amostra de telemetria.
 - **`POST /api/endpoints/:id/refresh` espera a resposta,** e não só o envio: volta quando o handshake e a telemetria
   que o pedido provocou estão gravados, ou com 504 depois de 15 s. A ficha relida já mostra o dado novo. Dois pedidos
   juntos para a mesma máquina esperam a mesma resposta, e só um sai.
@@ -1611,10 +1598,9 @@ na lista de hosts.
 - **Habilitado também na máquina desconectada,** como os comandos: o status da tela atrasa até uns 3 minutos, e quem
   responde é o servidor.
 
-**Por quê:** a peça trocada e o IP novo só chegavam no próximo handshake ou no reenvio diário (A25 de lá). O GLPI tem o
+**Por quê:** a peça trocada e o IP novo só chegavam no próximo handshake ou no reenvio diário. O GLPI tem o
 "Request inventory", o Fleet o "Refetch", o Intune o "Sync", e o Lansweeper reescaneia o ativo. Esperar a resposta é o
-que o Fleet faz com o "Fetching…" da página do host, e é o que a A23 de lá cobrava de toda ação nova: sem resposta, o
-painel não saberia se ela rodou.
+que o Fleet faz com o "Fetching…" da página do host: sem resposta, o painel não saberia se ela rodou.
 
 **O que fica de fora, declarado:** atualizar várias máquinas de uma vez (O).
 

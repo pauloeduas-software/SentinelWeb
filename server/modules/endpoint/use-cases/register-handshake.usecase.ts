@@ -20,7 +20,7 @@ export async function registerHandshake(data: HandshakeData): Promise<string | n
   // neste handshake (a leitura do firmware falhou) não apaga o que já estava, e
   // com ele o vínculo que a reconciliação já tinha resolvido. O fabricante, o
   // modelo e as placas de vídeo seguem a mesma regra. A versão do agente, não: o
-  // handshake sem ela é de um agente anterior à A25, e a versão gravada mentiria.
+  // handshake sem ela é de um agente que não a manda, e a versão gravada mentiria.
   const inventory = {
     hostname: data.hostname,
     osVersion: data.osVersion,

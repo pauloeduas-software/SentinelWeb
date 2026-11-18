@@ -22,7 +22,7 @@ describe('o Gpus do handshake', () => {
     const agente = await conectarAgente(api, 'hwid-placas');
     await agente.handshake({
       Gpus: [
-        // O agente anterior à A24 mandava o fabricante e o PCI de cada placa.
+        // O agente antigo mandava o fabricante e o PCI de cada placa.
         { Name: 'GeForce MX150', Manufacturer: 'NVIDIA', PciSlot: '0000:01:00.0', MemoryBytes: 2147483648 },
         { MemoryBytes: 1073741824 },
         'texto solto',

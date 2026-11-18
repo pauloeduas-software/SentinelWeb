@@ -32,8 +32,8 @@ export interface AgentCommandPacket {
  * Quem não manda serial simplesmente não pontua por serial na cascata de
  * reconciliação (docs/decisoes/reconciliacao.md, D46).
  *
- * O QUE O SENTINELAGENTE MANDA, e em que forma, está na A14 de lá
- * (o `protocolo.md` das decisões do SentinelAgente). Valor de fábrica ele manda nulo.
+ * O QUE CHEGA, e onde cada campo é gravado, está em `docs/referencia/agente.md`.
+ * Valor de fábrica chega nulo.
  */
 export interface HandshakeData {
   hwid: string;
@@ -59,11 +59,11 @@ export interface HandshakeData {
    */
   hardwareModel: string | null;
   /**
-   * As placas de vídeo do `Gpus` (A22 de lá), só com os campos que o agente
+   * As placas de vídeo do `Gpus`, só com os campos que o agente
    * manda. `undefined` quando o agente não mandou: aí a lista gravada fica como estava.
    */
   gpus: GpuData[] | undefined;
-  /** A versão do agente (`AgentVersion`, A25 de lá). Nula no agente que não a manda. */
+  /** A versão do agente (`AgentVersion`). Nula no agente que não a manda. */
   agentVersion: string | null;
 }
 

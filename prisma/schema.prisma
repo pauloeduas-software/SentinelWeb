@@ -48,12 +48,12 @@ model Endpoint {
   /// `hardwareModel`, nunca `model`: `endpoint.model` lê-se como a relação de
   /// catálogo do ativo, e o compilador não pegaria a confusão (D13).
   hardwareModel String?
-  /// As placas de vídeo, como o SentinelAgente as manda (`Gpus`, A22 de lá): a
+  /// As placas de vídeo, como o SentinelAgente as manda (`Gpus`): a
   /// lista em PascalCase, lida pelo front como os discos da telemetria.
   gpus          Json?
-  /// A versão do SentinelAgente que mandou o último handshake (`AgentVersion`,
-  /// A25 de lá): a lista de Agentes a mostra, para achar quem ficou com o agente
-  /// velho. Nula no agente anterior à A25, que não a manda (DE).
+  /// A versão do SentinelAgente que mandou o último handshake (`AgentVersion`):
+  /// a lista de Agentes a mostra, para achar quem ficou com o agente velho. Nula
+  /// no agente que não a manda (DE).
   agentVersion  String?
 
   // ── O VÍNCULO COM O PATRIMÔNIO (D45) ─────────────────────────────────────

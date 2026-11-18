@@ -32,6 +32,8 @@ há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página nova en
 - **O que o banco recusa:** [`invariantes.md`](./docs/referencia/invariantes.md).
 - **Licença, estoque, posto, colaborador, baixa ou Configurações:** a página do assunto em
   [`referencia/`](./docs/referencia/).
+- **O que chega do SentinelAgente:** [`agente.md`](./docs/referencia/agente.md). Decisão do agente mora
+  no repositório dele; aqui fica só a descrição do que ele manda e recebe.
 
 ## Arquitetura
 

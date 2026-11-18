@@ -26,7 +26,7 @@ export interface Endpoint {
   localIp: string | null;
   status: AgentStatus;
   lastSeen: string;
-  /** A versão do SentinelAgente, do último handshake. Nula no agente anterior à A25. */
+  /** A versão do SentinelAgente, do último handshake. Nula no agente que não a manda. */
   agentVersion: string | null;
   /**
    * O ativo do vínculo, identificado: é a coluna Computador, e a linha leva à

@@ -787,11 +787,9 @@ data de compra, porque um item junta unidades compradas em dias diferentes.
 **Decisão** (2026-11-16, revendo o artigo do TCC): a coleta do software instalado e a conformidade de
 licença deixam de ser corte definitivo e passam a trabalho futuro declarado. Nada muda no código agora:
 a licença continua cadastro com quantidade e entregas ([AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)),
-o servidor não guarda programas e o agente não os manda
-([A24](https://github.com/pauloeduas-software/SentinelAgente/blob/main/docs/decisoes/protocolo.md#a24--o-agente-manda-só-o-que-o-sentinelweb-lê-os-programas-a-rede-e-os-processos-saem) de lá).
+o servidor não guarda programas e o agente não os manda.
 
-- **A volta começa no SentinelWeb**, como a A24 pede: o servidor guarda e mostra os programas da
-  máquina, e só então o agente passa a mandá-los.
+- **A volta começa no SentinelWeb**: o servidor guarda e mostra os programas da máquina.
 - **A licença liga ao programa por vínculo explícito**, nunca por casamento de nome, a regra do
   [D102](./reconciliacao.md#d102--licença--pacote-é-vínculo-explícito-nunca-casamento-por-nome).
 

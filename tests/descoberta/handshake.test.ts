@@ -101,8 +101,8 @@ describe('a versão do agente (DE)', () => {
     expect(lista.body.rows.find((linha) => linha.id === endpoint.id)?.agentVersion).toBe('0.2.0');
     expect((await api.get<{ agentVersion: string | null }>(`/api/endpoints/${endpoint.id}`)).body.agentVersion).toBe('0.2.0');
 
-    // AO CONTRÁRIO DA SÉRIE: o handshake sem versão é de um agente anterior à
-    // A25 (reinstalado com o pacote velho), e a versão gravada mentiria.
+    // AO CONTRÁRIO DA SÉRIE: o handshake sem versão é de um agente que não
+    // a manda (reinstalado com o pacote velho), e a versão gravada mentiria.
     await agente.handshake({ Hostname: 'pc-versao-velha' });
     const depois = await esperarPor('o handshake do agente velho', async () => {
       const achado = await buscar('hwid-versao');

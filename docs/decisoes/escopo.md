@@ -697,3 +697,16 @@ do servidor repetem o `DELETE` no mesmo dia.
   handshake) — o agente vive fora deste repositório, e tirar um campo do contrato sem conferir
   o que o agente instalado manda é renegociá-lo às cegas. Fica a conferir no agente real,
   pela mesma razão do [A](./reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional).
+
+---
+
+## DM — A máquina Windows é trabalho futuro
+
+**Decisão** (2026-11-17): receber a máquina Windows é trabalho futuro declarado. Nada muda no código agora: o
+servidor recebe a máquina pelo `/agent-hub` e pelas três mensagens de [`agente.md`](../referencia/agente.md), sem
+regra que dependa do sistema operacional, e hoje só chega máquina Linux.
+
+**Por quê:** a maior parte do parque de uma empresa roda Windows, e a aba Máquina já foi pensada para ele: "qual
+Windows está ali" é uma das perguntas que a [CP](./reconciliacao.md#cp--a-aba-máquina-mostra-o-sistema-o-processador-o-ip-e-o-mac)
+responde. Declarada como futura, a lacuna fica escrita, como a coleta de software na
+[DG](./licencas.md#dg--a-coleta-de-software-e-a-conformidade-de-licença-voltam-como-trabalho-futuro).

@@ -6,7 +6,7 @@
 
 | Pasta | A regra | O que mora lá |
 |---|---|---|
-| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, telas, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque |
+| [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, telas, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque, o que chega do agente |
 | [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
 | [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (de `A` em diante), um arquivo por assunto |
 
@@ -48,6 +48,10 @@ contas, o status, o que a entrega e a devolução recusam, e onde a licença apa
 tela; [`referencia/estoque.md`](./referencia/estoque.md) diz o mesmo do estoque, que segue a mesma
 lógica.
 
+**Vou mexer no que o agente manda.** [`referencia/agente.md`](./referencia/agente.md) diz o cadastro, a
+conexão, cada campo das três mensagens e onde ele é gravado, e os comandos. As regras do agente moram
+no repositório dele.
+
 **Vou mexer no banco.** [`referencia/invariantes.md`](./referencia/invariantes.md) diz o que
 nunca pode ser falso e onde cada regra é defendida, e
 [`guias/criar-uma-migration.md`](./guias/criar-uma-migration.md) tem a receita (**nunca**
@@ -84,7 +88,7 @@ Se você está escrevendo a mesma frase na segunda zona, uma das duas está no l
 2. **Auditoria e revisão não ganham arquivo.** Elas atualizam o documento que revisaram: a
    correção de uma referência substitui o parágrafo errado.
    Documento de referência não carrega a lista das suas próprias correções — isso é o `git log`.
-3. **Decisão nova continua a letra** (a próxima é a `DM`; a numeração `D` parou no `D164`, pelo
+3. **Decisão nova continua a letra** (a próxima é a `DN`; a numeração `D` parou no `D164`, pelo
    motivo escrito em [*A segunda rodada*](./decisoes/README.md#a-segunda-rodada-ap)), entra no
    arquivo do assunto que ela governa. Se ela corrige uma anterior, a antiga ganha `> **Superada por…**`
    logo abaixo do título, e a tabela de supersessões cresce.

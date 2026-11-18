@@ -86,7 +86,7 @@ server/
 | Domínio | O que é | Model do Prisma |
 |---|---|---|
 | `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
-| `endpoint` | Máquina descoberta pelo agente (lado RMM) + telemetria (só a última amostra de cada máquina fica, com expurgo uma vez por dia) + comandos | `Endpoint`, `Telemetry` |
+| `endpoint` | Máquina descoberta pelo agente (lado RMM, [`agente.md`](agente.md)) + telemetria (só a última amostra de cada máquina fica, com expurgo uma vez por dia) + comandos | `Endpoint`, `Telemetry` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
 | `catalog` | As SETE tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `RetireReason`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
 | `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) Idioma, moeda e formato de data são fixos no código (`src/helpers/format.helper.ts`) | `AppSetting` |
