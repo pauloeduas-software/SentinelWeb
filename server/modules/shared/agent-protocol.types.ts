@@ -29,8 +29,8 @@ export interface AgentCommandPacket {
  * transformaria a máquina que coleta menos em erro de parser, e ela sumiria do
  * painel justamente por isso.
  *
- * Quem não manda serial simplesmente não pontua por serial na cascata de
- * reconciliação (docs/decisoes/reconciliacao.md, D46).
+ * Quem não manda serial simplesmente não se liga sozinho a um computador: o
+ * vínculo automático é pela série única (docs/decisoes/reconciliacao.md, DC).
  *
  * O QUE CHEGA, e onde cada campo é gravado, está em `docs/referencia/agente.md`.
  * Valor de fábrica chega nulo.
@@ -45,7 +45,7 @@ export interface HandshakeData {
   localIp: string | null;
   cpuModel: string | null;
 
-  /** O número de série gravado no firmware. O sinal de 100 pontos da cascata. */
+  /** O número de série gravado no firmware. A série única liga a máquina ao computador sozinha. */
   biosSerial: string | null;
   /** O identificador que o firmware dá ao produto. Sobrevive à reinstalação. */
   systemUuid: string | null;

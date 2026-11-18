@@ -10,7 +10,7 @@ import { getAgentEnrollSecret } from '../../../infra/config/env';
 //
 //   o TOKEN DA MÁQUINA, que o cadastro devolve, é o único que o `/agent-hub`
 //   aceita. Ele diz QUAL máquina está do outro lado: a conexão fica presa ao HWID
-//   dele, e a mensagem com outro HWID é descartada.
+//   dele, e a mensagem com outro HWID fecha a conexão com 1008.
 //
 // Os dois vão no header `Authorization: Bearer <…>`, não na query string: header
 // é o que o `infra/logger` já oculta (logger.ts, `redact`), e todo cliente

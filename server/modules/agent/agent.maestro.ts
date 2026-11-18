@@ -63,8 +63,8 @@ export class AgentMaestro {
         // dela no registro — e os comandos dela.
         //
         // E A CONEXÃO FECHA, com 1008 (CU): aberta, ela não serve para nada, e o
-        // agente cujo HWID mudou depois do cadastro (placa trocada, BIOS
-        // atualizada, token copiado numa imagem) ficaria mandando para o vazio sem
+        // agente cujo HWID mudou depois do cadastro (o arquivo do HWID apagado ou
+        // trocado, o token de outra instalação) ficaria mandando para o vazio sem
         // saber. Com o código, ele diz no log dele por que não entra.
         if (message.hwid !== hwid) {
           logger.warn(

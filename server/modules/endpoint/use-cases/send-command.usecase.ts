@@ -24,8 +24,8 @@ interface SentCommand {
  * ═══════════════════════════════════════════════════════════════════════════
  * RECEBE O ID DA MÁQUINA, E RESOLVE O HWID AQUI DENTRO.
  *
- * A rota era `POST /api/endpoints/:hwid/command`, e o hwid vinha da URL. Ele é a
- * identidade de HARDWARE, derivada pelo agente, e era o painel que o carregava:
+ * A rota era `POST /api/endpoints/:hwid/command`, e o hwid vinha da URL. Ele é o
+ * id da instalação do agente, e era o painel que o carregava:
  * a tela de telemetria tinha a frota inteira em memória, então tinha o hwid de
  * todas.
  *
@@ -39,7 +39,7 @@ interface SentCommand {
  * Isto NÃO é esconder o hwid: ele continua saindo na listagem e na rota de uma
  * máquina, porque é coluna do `Endpoint`, e a aba Máquina do ativo o mostra com
  * um botão de copiar — é o que se cola num chamado. O que sai da URL é a
- * identidade de HARDWARE como ENDEREÇO, e com ela sai o `{ hwid }` que o
+ * identidade do agente como ENDEREÇO, e com ela sai o `{ hwid }` que o
  * erro espalhava no corpo da resposta.
  *
  * E ISSO SEPAROU DOIS ERROS QUE ERAM UM. Com o hwid na URL, "máquina não existe"

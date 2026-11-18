@@ -39,7 +39,7 @@ model Endpoint {
 
   // ── IDENTIDADE COLETADA ──────────────────────────────────────────────────
   // Tudo nulável: o agente vive fora deste repositório e o rollout leva
-  // semanas. Máquina que não manda serial não pontua por serial — não vira erro.
+  // semanas. Máquina que não manda serial não se liga sozinha — não vira erro.
   biosSerial    String?
   systemUuid    String?
   // O fabricante e o modelo como a própria máquina se declara: a aba Máquina os
