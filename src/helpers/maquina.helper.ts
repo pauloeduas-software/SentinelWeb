@@ -9,7 +9,7 @@ export function caminhoDaMaquina(endpointId: string): string {
 /** Uma placa de vídeo, já lida do `Gpus` que o agente manda em PascalCase. */
 interface PlacaDeVideo {
   nome: string;
-  /** Em bytes. Nula quando o driver não diz (a NVIDIA e a Intel). */
+  /** Em bytes. Nula na placa integrada e quando o driver não diz. */
   memoria: number | null;
 }
 
