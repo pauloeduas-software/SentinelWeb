@@ -323,7 +323,7 @@ repositório — contra este, com o critério do usuário: *coisas simples que f
 tecnologias e boas práticas, não mais funcionalidades*):
 
 **Veio:**
-- o `CLAUDE.md`, as skills `migration` e `dominio-novo`, a regra de lint contra cor fixa, o `bun run
+- o `CLAUDE.md`, a skill `dominio-novo`, a regra de lint contra cor fixa, o `bun run
   check` e o E2E com Playwright (a rodada anterior);
 - a **trava do login que recomeça do zero ao vencer** — o contador seguia em 5 e o primeiro erro depois
   do desbloqueio travava de novo, a cada erro, até alguém acertar (bug);

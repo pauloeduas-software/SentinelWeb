@@ -8,7 +8,7 @@ onde olhar e o que não se negocia. Mudou uma regra daqui? Atualize este arquivo
 Painel de inventário de TI com convergência RMM: o cadastro de computadores, postos, estoque, licenças
 e colaboradores, e a máquina que o SentinelAgente descobre pelo `/agent-hub`. Fastify + Prisma (Postgres)
 em `server/`, React 19 + Vite + TanStack Query em `src/`. As telas e o menu estão no
-[`README.md`](./README.md#-telas). Skills em `.claude/skills/`: `migration` e `dominio-novo`.
+[`README.md`](./README.md#-telas). Skill em `.claude/skills/`: `dominio-novo`.
 
 ## Comandos
 
