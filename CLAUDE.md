@@ -51,10 +51,10 @@ há mock de Prisma ([`testes.md`](./docs/referencia/testes.md)). Página nova en
 
 ## Banco
 
-**Nunca `prisma migrate dev`.** O schema inteiro vive na `0_init`, editada no lugar. Siga
-[`criar-uma-migration.md`](./docs/guias/criar-uma-migration.md) do começo ao fim: o `CHECK` que um
-`DROP COLUMN` apaga em silêncio, o banco de desenvolvimento que nunca é `--shadow-database-url` e os
-bancos de teste a apagar depois estão lá.
+**Nunca `prisma migrate dev` nem `db push`.** Cada mudança de schema é uma migration nova, e a `0_init`
+não se edita (DN). Siga [`criar-uma-migration.md`](./docs/guias/criar-uma-migration.md) do começo ao
+fim: o `CHECK` que um `DROP COLUMN` apaga em silêncio e o banco de desenvolvimento que nunca é
+`--shadow-database-url` estão lá.
 
 ## Regras do sistema inteiro
 

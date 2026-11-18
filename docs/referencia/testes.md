@@ -339,8 +339,8 @@ Como roda, e por que assim:
   vitest e o Playwright poderem rodar ao mesmo tempo sem um truncar o do outro.
   Passa pela **mesma trava do sufixo `_test`** e pelos mesmos passos
   (`tests/e2e/preparar.ts` importa o `global-setup.ts` e o `database.ts`): criar
-  se faltar, `migrate deploy`, esvaziar, semear e criar o administrador. Mudou a
-  `0_init`, apague este banco também.
+  se faltar, `migrate deploy`, esvaziar, semear e criar o administrador. A migration
+  nova chega por esse `migrate deploy`.
 - **A sessão é guardada, não repetida.** O projeto `sessao` (`auth.setup.ts`) entra
   pela tela e guarda o cookie em `tests/e2e/.auth/` (ignorado pelo git); os specs
   autenticados o reaproveitam. Cinco erros bloqueiam a conta por quinze minutos e

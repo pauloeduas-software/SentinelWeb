@@ -141,7 +141,7 @@ bun run dev
 ### Migrations
 
 `prisma migrate dev` é interativo e falha em terminal não interativo — **nunca** o use aqui.
-Enquanto não existe banco em produção, o schema inteiro vive numa migration só, a `0_init`,
-editada no lugar a cada mudança de `schema.prisma`. A receita — regerar a `0_init`, alinhar o
-banco de desenvolvimento e conferir que nada divergiu — está em
+Cada mudança de `schema.prisma` é uma migration nova, aplicada por `bun run db:migrate`, e a
+`0_init` não se edita. A receita — gerar o SQL, escrever à mão o `CHECK` e o índice parcial,
+aplicar e conferir que nada divergiu — está em
 [`docs/guias/criar-uma-migration.md`](./docs/guias/criar-uma-migration.md).

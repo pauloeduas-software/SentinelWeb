@@ -58,6 +58,7 @@ que corrigem algo anterior:
 | **U** (os dois cargos), **W** (o rebaixar) | **Z** | sobra um cargo só, `ADMIN`, com toda a validação dele; a separação de cargos é decisão a tomar |
 | **Z** | **AV** | três cargos, `TECNICO < SUPERVISOR < ADMIN`: o Técnico opera, o Supervisor decide e o Administrador cuida das contas |
 | **AU** (as 12 horas da sessão) | **BD** | a sessão vale 48 horas, ainda fixa e contada da entrada |
+| **D6** (a `0_init` editada no lugar, em parte) | **DN** | cada mudança de schema é uma migration nova, aplicada por `migrate deploy`; a `0_init` não se edita |
 | **D19** (a lista fechada de motivos da baixa) | **BE** | o enum `RetiredReason` sai: os motivos são um cadastro de Configurações, e a baixa continua separada do status |
 | **E** (o placar da varredura ao lado do botão) | **BF** | o placar vai para o cartão do canto inferior direito, como toda resposta a um clique |
 | **AY** (o texto encolhe com a densidade) | **BH** | a densidade fica no espaçamento, e o texto tem piso de 12px |

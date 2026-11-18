@@ -24,6 +24,9 @@ furar. A hierarquia de `Location` resolve o que precisamos hoje.
 
 ## D6 — Baselinar as migrations antes de tocar em qualquer coluna — e NÃO com `migrate dev`
 
+> **Superada em parte por [DN](#dn--cada-mudança-de-schema-é-uma-migration-nova):** a `0_init` não se
+> edita mais no lugar; o **nunca** `migrate dev` continua.
+
 **✅ FEITO.**
 O schema tinha sido aplicado com `db push` e a tabela `_prisma_migrations` não existia, então
 `prisma migrate dev` detectaria drift e **ofereceria resetar o banco**. O estado atual foi
@@ -1001,3 +1004,29 @@ Licenças; e em Agentes a Versão só aparece em moldura larga.
 
 **O que ficou de fora.** "Etiqueta" em Postos e "Computador" em Agentes para a mesma informação, a primeira coluna de
 Configurações, o nome do computador fora da linha e "livres" × "disponíveis": são texto ou dado novo em tela fechada.
+
+---
+
+## DN — Cada mudança de schema é uma migration nova
+
+> Supera a nota *"Enquanto não há produção"* do [D6](#d6--baselinar-as-migrations-antes-de-tocar-em-qualquer-coluna--e-não-com-migrate-dev).
+
+**Decisão.** A `0_init` congela como está, e cada mudança de `schema.prisma` passa a ser uma
+migration nova em `prisma/migrations/`, aplicada por `migrate deploy` em todo banco: o de
+desenvolvimento, os de teste e o de produção.
+
+- **O SQL sai do `migrate diff --from-migrations`**, contra um shadow descartável, e o `CHECK` e o
+  índice parcial são escritos à mão no fim da própria migration nova.
+- **Continua valendo:** nunca `migrate dev` nem `db push`, e o banco de desenvolvimento nunca é o
+  shadow.
+- **Saem** o alinhamento à mão do banco de desenvolvimento, o `UPDATE` do checksum da `0_init` em
+  `_prisma_migrations` e a obrigação de apagar os bancos de teste a cada mudança.
+
+**Por quê:** editar a `0_init` no lugar só servia enquanto nenhum banco precisava subir de uma
+versão para a outra. Uma migration aplicada tem o checksum gravado em `_prisma_migrations`, e um
+banco que já a tem não aceita outra versão dela: a mudança tem que chegar como migration nova.
+Ela também chega sozinha aos bancos de teste, que rodam `migrate deploy` a cada execução.
+
+**O custo:** o `DROP COLUMN` de uma coluna citada num `CHECK` pede o `DROP CONSTRAINT` +
+`ADD CONSTRAINT` dentro da migration nova, e a mudança que não é aditiva vai em duas migrations.
+A receita está em [`../guias/criar-uma-migration.md`](../guias/criar-uma-migration.md).
