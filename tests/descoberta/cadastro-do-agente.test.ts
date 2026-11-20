@@ -54,6 +54,13 @@ describe('POST /agent-hub/enroll', () => {
     expect((await cadastrar({})).status).toBe(422);
     expect((await cadastrar({ Hwid: '   ' })).status).toBe(422);
   });
+
+  it('recusa o corpo acima de 8 KiB com 413, antes de conferir o segredo', async () => {
+    const resposta = await cadastrar({ Hwid: 'x'.repeat(64 * 1024) }, 'outro-segredo');
+
+    // 413 e não 401: o corpo é recusado antes do handler, com o segredo errado e tudo.
+    expect(resposta.status).toBe(413);
+  });
 });
 
 describe('o /agent-hub aceita só o token da máquina', () => {

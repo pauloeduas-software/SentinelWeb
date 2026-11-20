@@ -17,6 +17,7 @@
 | `201 { "Token": "…" }` | o token da máquina, com 64 caracteres hexadecimais. O banco guarda o SHA-256 dele em `agent_credentials`, uma linha por HWID, e o token anterior da máquina deixa de valer |
 | `401` | o segredo de instalação não confere |
 | `409` | a máquina está conectada |
+| `413` | o corpo passa de 8 KiB, o mesmo teto do login |
 | `422` | o corpo vem sem `Hwid` |
 
 - O teto é de 20 por minuto por IP.

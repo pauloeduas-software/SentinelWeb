@@ -43,8 +43,10 @@ export class AgentMaestro {
       await reply.status(401).send({ error: 'Token de agente inválido.' });
     };
 
-    // O teto é o do login: a repetição aqui É o ataque (adivinhar o segredo).
-    server.post('/agent-hub/enroll', ENROLL_RATE_LIMIT, agentController.enroll);
+    // O teto é o do login: a repetição aqui É o ataque (adivinhar o segredo). E o
+    // corpo também: a rota é anônima, e sem limite próprio valeria o 1 MiB global
+    // do Fastify, quando o cadastro manda só o HWID.
+    server.post('/agent-hub/enroll', { ...ENROLL_RATE_LIMIT, bodyLimit: 8 * 1024 }, agentController.enroll);
 
     server.get('/agent-hub', { websocket: true, preHandler: exigirToken }, (socket, request) => {
       // O token já disse quem é: toda mensagem desta conexão é desta máquina.
