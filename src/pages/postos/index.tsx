@@ -13,7 +13,7 @@ import { usePode } from '../../stores/auth.store';
 // O POSTO DE TRABALHO — a MesaEscritório, a bancada, o guichê.
 //
 // É o coração do modelo de posse (docs/referencia/modelo-de-posse.md): quem
-// está em cada mesa, o que foi entregue a ela, e se ela está vaga. E é aqui que
+// está em cada posto, o que foi entregue a ele, e se ele está vago. E é aqui que
 // o posto se CADASTRA — criar, editar e excluir, sem Desativar (AN) —, cada um
 // dentro de uma localização de Configurações (decisão Y).
 export default function PostosPage() {

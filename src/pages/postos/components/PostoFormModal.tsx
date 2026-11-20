@@ -9,8 +9,8 @@ import type { Posto } from '../../../types/workstation.types';
 
 // Criar ou editar a Mesa 1 SEM sair da lista nem da ficha.
 //
-// Três campos: nome, a LOCALIZAÇÃO onde a mesa fica e uma nota. Endereço, CEP e
-// telefone são da localização, não da mesa — quem precisa deles edita a
+// Três campos: nome, a LOCALIZAÇÃO onde o posto fica e uma nota. Endereço, CEP e
+// telefone são da localização, não do posto — quem precisa deles edita a
 // localização em Configurações, onde eles fazem sentido.
 //
 // Grava em `/workstations`, o cadastro do posto (decisão Y).

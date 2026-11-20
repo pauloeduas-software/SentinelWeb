@@ -49,12 +49,12 @@ export function usePersonOccupanciesQuery(personId: string | null) {
  *
  * a responsabilidade é derivada (Camada 3). Colocar alguém na Mesa 1 muda quem
  * responde por TODO ativo entregue à Mesa 1 sem que nenhum ativo tenha sido
- * tocado. Encerrar a última ocupação faz o caminho inverso. Invalidar só
+ * tocado. Registrar a saída do último ocupante faz o caminho inverso. Invalidar só
  * `occupancies` deixaria a ficha do computador mentindo até o próximo refetch.
  *
  * E POSTOS pelo mesmo motivo, do outro lado: a linha da Mesa 1 em /postos mostra
- * quem responde e o selo "posto vago". Encerrar a última ocupação de
- * uma mesa que segura equipamento é exatamente o que ACENDE aquele selo — sem
+ * quem responde e o selo "posto vago". Registrar a saída do último ocupante de
+ * um posto que segura equipamento é exatamente o que ACENDE aquele selo — sem
  * esta invalidação, a tela que existe para mostrar o sinal seria a última a
  * saber dele.
  *
@@ -80,12 +80,12 @@ export function useAddWorkstationOccupant() {
 
 /**
  * CORRIGE O TURNO de uma ocupação aberta — "manha" para "manhã", "08h–14h" para
- * "08h–15h". A linha continua a mesma, com o mesmo início: encerrar e reabrir
+ * "08h–15h". A linha continua a mesma, com o mesmo início: registrar a saída e reabrir
  * fabricaria no histórico uma saída que não aconteceu.
  *
  * Invalida o mesmo que adicionar e encerrar: o turno não muda QUEM responde,
- * mas aparece junto do nome na ficha do ativo ("Laura (Manhã)"), na posse dele
- * e na lista de postos.
+ * mas aparece junto do nome no Histórico do posto ("Laura (Manhã)") e na aba
+ * Postos do colaborador.
  */
 export function useCorrigirTurno() {
   const queryClient = useQueryClient();

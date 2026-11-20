@@ -11,7 +11,7 @@ import { ENROLL_RATE_LIMIT } from '../../infra/http/write-rate-limit';
 
 const logger = createLogger('agent.maestro');
 
-// Porta de entrada do Agente Sentinel. Aqui só mora transporte: aceitar a
+// Porta de entrada do SentinelAgente. Aqui só mora transporte: aceitar a
 // conexão, traduzir o que chegou e encaminhar. Regra de negócio nenhuma.
 //
 // DUAS ROTAS, com um segredo cada (CR):

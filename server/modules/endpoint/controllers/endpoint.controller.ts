@@ -37,7 +37,7 @@ export const endpointController = {
       maxPerPage: 1_000,
     });
 
-    // Os filtros saem do `parseListQuery` de propósito: ele é do `core` e
+    // Os filtros saem do `parseListQuery` de propósito: ele é do `infra` e
     // não conhece as vistas. Quem valida o que é do domínio é o schema
     // do domínio — e agora ele recebe SÓ o que é dele, então pode voltar a ser
     // estrito e pegar `?vista=nenhuma` em vez de ignorar em silêncio.

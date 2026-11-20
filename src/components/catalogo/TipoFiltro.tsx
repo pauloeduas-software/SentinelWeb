@@ -1,7 +1,7 @@
 import FiltroDaLista from '../FiltroDaLista';
 import type { OpcaoFixa } from './catalog-ui.types';
 
-// O FILTRO QUE SEPARA A ABA POR TIPO: Ativo, Estoque, Licença, nas categorias. Aparece
+// O FILTRO QUE SEPARA A ABA POR TIPO: Computador, Estoque, Licença, nas categorias. Aparece
 // só na aba cuja spec declara `filtroPorTipo`.
 
 interface TipoFiltroProps {

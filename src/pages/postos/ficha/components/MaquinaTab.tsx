@@ -4,11 +4,11 @@ import TelemetriaDaMaquina from '../../../../components/TelemetriaDaMaquina';
 import type { AtivoDoPosto } from '../../../../types/workstation.types';
 import { ativosComMaquina } from '../../helpers/postos.helper';
 
-// A MÁQUINA DA MESA, AO VIVO: a telemetria e os comandos, que são o RMM entrando
+// A MÁQUINA DO POSTO, AO VIVO: a telemetria e os comandos, que são o RMM entrando
 // pelo ITAM. Esta parte é a convergência vista do lado do POSTO. A telemetria morava
 // numa tela de frota, que sabia a medida e não sabia de quem é a máquina; aqui a
 // pergunta já vem com dono: "o computador da Mesa 1 está bem?". E é no posto que ela
-// se faz, porque é a mesa que tem ocupante e turno — em outra aba, nesta mesma ficha.
+// se faz, porque é o posto que tem ocupante e turno — em outra aba, nesta mesma ficha.
 //
 // A aba é a mesma do computador: só o painel, com a linha que leva a Agentes,
 // onde mora o vínculo (BX, BZ).

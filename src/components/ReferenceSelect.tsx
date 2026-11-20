@@ -5,7 +5,7 @@ import { Seletor } from './ui/seletor';
 
 // Seletor alimentado por outra tabela (/options).
 //
-// É o ÚNICO componente desta pasta que busca dado, e por um motivo concreto: a
+// Busca o próprio dado, e por um motivo concreto: a
 // quantidade de campos-referência muda de aba para aba (Modelos tem dois,
 // Fabricantes nenhum). Buscar no hook da página exigiria chamar um hook por
 // campo dentro de um laço de tamanho variável — o que as regras dos hooks
@@ -18,7 +18,7 @@ import { Seletor } from './ui/seletor';
  * O TETO DO `/options` NO SERVIDOR, repetido aqui de propósito.
  *
  * O número mora em `server/modules/catalog/use-cases/list-catalog-options.usecase.ts`
- * (e nos dois irmãos, de ativos e de usuários). O lint impede `src/` importar de
+ * (e no irmão, o de ativos). O lint impede `src/` importar de
  * `server/`, e a regra existe para o Prisma não acabar no bundle — não vale
  * furá-la por um número (é o D71 outra vez).
  *
@@ -64,7 +64,7 @@ export default function ReferenceSelect({
   // nome na hora da escolha, a opção órfã levaria o nome do `atual` — que é o
   // vínculo de ANTES, não o escolhido.
   const [escolhida, setEscolhida] = useState<{ id: string; name: string } | null>(null);
-  // O MESMO `useDebouncedValue` das cinco listagens: sem ele é uma requisição
+  // O MESMO `useDebouncedValue` das listagens: sem ele é uma requisição
   // por tecla, e o `/options` não tem paginação para amortecer.
   const buscaDebounced = useDebouncedValue(busca);
 

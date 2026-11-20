@@ -16,7 +16,7 @@ import type { MaquinaDoAtivo } from '../../../../types/reconciliation.types';
 // e o posto, e passou a saber a medida também.
 //
 // O painel é `components/TelemetriaDaMaquina` porque a ficha do POSTO
-// mostra o mesmo — o computador da mesa é um ativo, visto do outro lado. A aba é
+// mostra o mesmo — o computador do posto é um ativo, visto do outro lado. A aba é
 // só ele: o vínculo mora em Agentes, e a linha do painel leva para lá (BZ).
 // ─────────────────────────────────────────────────────────────────────────────
 

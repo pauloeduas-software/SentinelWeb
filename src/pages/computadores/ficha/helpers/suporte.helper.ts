@@ -1,6 +1,6 @@
 import type { FabricanteRef } from '../../../../types/asset.types';
 
-// OS CANAIS DE SUPORTE DO FABRICANTE, prontos para a ficha do ativo.
+// OS CANAIS DE SUPORTE DO FABRICANTE, prontos para a ficha do computador.
 //
 // A pergunta que a ficha responde aqui é "para onde ligo para acionar a garantia
 // DESTE notebook?". O cadastro dos canais mora em Configurações › Fabricantes;

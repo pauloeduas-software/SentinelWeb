@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { hojeNoBrasil } from './hoje.helper';
 
-// Construtores de campo reaproveitados pelos schemas de vários domínios — as
-// sete tabelas de catálogo e o ativo. Um lugar só para as regras que se repetem:
+// Construtores de campo reaproveitados pelos schemas de vários domínios. Um
+// lugar só para as regras que se repetem:
 // nome, texto livre, e-mail, site, dinheiro, data.
 //
-// Todos seguem o mesmo padrão: `''` vira `null`
+// Os opcionais seguem o mesmo padrão: `''` vira `null`
 // (o formulário manda string vazia quando o usuário limpa o campo) e ausente
 // continua `undefined`, que o Prisma lê como "não mexe neste campo".
 

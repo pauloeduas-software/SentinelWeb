@@ -4,7 +4,7 @@ import { caminhoDoItem, textoDeUnidades } from '../../../../helpers/estoque.help
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { PostoDetalhe } from '../../../../types/workstation.types';
 
-// O ESTOQUE DESTA MESA. Depois do computador, de propósito: o ativo é o que a
+// O ESTOQUE DESTE POSTO. Depois do computador, de propósito: o ativo é o que a
 // invariante 19 limita a um; o estoque é o resto da mesa — monitor, teclado, mouse,
 // cabo —, entregue por quantidade e sem a mesma trava (docs/decisoes/estoque.md).
 

@@ -21,7 +21,7 @@ import { usePode } from '../../stores/auth.store';
 //
 // Markup e mais nada: estado e chamadas ficam no `useLicencas`
 // (docs/referencia/arquitetura.md). Sem abas: a encerrada fica na lista, como o
-// desativado nas Configurações (AF).
+// desativado no Estoque (AF).
 
 export default function LicencasPage() {
   const {

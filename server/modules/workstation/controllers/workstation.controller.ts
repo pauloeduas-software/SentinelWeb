@@ -55,7 +55,7 @@ export const workstationController = {
     const { id } = idParamSchema.parse(request.params);
     // O CUSTO DOS ATIVOS DA MESA É DE `SUPERVISOR` (D77), e esta rota vazava.
     //
-    // A ficha do posto devolve os ativos entregues com o `ASSET_SELECT`
+    // A ficha do posto devolvia os ativos entregues com o `ASSET_SELECT`
     // completo, e `purchaseCost` está nele: quem não fosse `SUPERVISOR` e abrisse
     // `/postos/:id` recebia o custo de compra de cada equipamento da mesa —
     // exatamente o que `tests/invariantes/dado-sensivel.test.ts` prova que

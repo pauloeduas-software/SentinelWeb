@@ -37,8 +37,8 @@ export async function getWorkstation(id: string, podeVerCusto: boolean) {
       // listagem, em toda criação e em toda edição, sem ninguém ter decidido.
       //
       // MENOS o custo de compra quando a sessão não é `SUPERVISOR` (D77) — é o que o
-      // `assetSelect` faz, e é a mesma função que a listagem e o detalhe de
-      // ativo usam. O `as` fixa o tipo no select completo porque é ele que o
+      // `assetSelect` faz, e é a mesma função que a listagem de
+      // ativo usa. O `as` fixa o tipo no select completo porque é ele que o
       // Prisma precisa ver; o mesmo recurso que `list-assets.usecase.ts` usa.
       select: {
         ...(assetSelect(podeVerCusto) as typeof ASSET_SELECT),

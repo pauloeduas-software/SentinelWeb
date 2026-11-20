@@ -98,8 +98,8 @@ export function desconectarAgente(hwid: string, motivo: string): boolean {
   return true;
 }
 
-// Encerramento gracioso: avisa os agentes antes de o processo sair, para que
-// reconectem em vez de esperar o timeout.
+// Encerramento gracioso: fecha com 1001 antes de o processo sair, e o agente põe
+// no log que o servidor encerrou. Ele reconecta igual, com ou sem o código.
 export function disconnectAllAgents(): void {
   if (activeAgents.size > 0) {
     logger.info(`[Agent] Encerrando ${activeAgents.size} conexão(ões) de agente...`);

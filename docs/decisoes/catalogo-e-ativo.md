@@ -6,8 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, C/I da segunda rodada, AO e BE (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> Decisões neste arquivo: D1–D3, D5, D8–D13, D18–D21, D85, C/I da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AO, BE, BJ, BL, BV, BW, CF, CK, CL, CN e CO.
 
 ---
 

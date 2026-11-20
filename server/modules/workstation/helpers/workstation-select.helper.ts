@@ -22,7 +22,7 @@ export const WORKSTATION_OCCUPANT_SELECT = {
 /**
  * A linha da listagem.
  *
- * As posses abertas vêm na MESMA consulta da página, só com a etiqueta: é a coluna
+ * As posses abertas vêm na MESMA consulta da página, só com a etiqueta e a série: é a coluna
  * Etiqueta, e o tamanho da lista é o `totalAtivos`. Uma consulta por linha seria
  * N+1. Os ocupantes saem numa segunda consulta, única para a página inteira.
  */
@@ -47,10 +47,6 @@ export const WORKSTATION_SELECT = {
 
 /**
  * O detalhe de um posto.
- *
- * Escrito por extenso em vez de espalhar `WORKSTATION_SELECT` com um campo a
- * mais: aqui os ativos vêm por inteiro, então o `_count` deles seria um segundo
- * número para o mesmo fato — e dois números para o mesmo fato divergem.
  *
  * Os ocupantes vêm só CONTADOS: desse número saem o `vago` e o status do posto. A lista com nomes
  * a tela lê da rota de ocupação (`/api/workstations/:id/occupants`), onde mora o

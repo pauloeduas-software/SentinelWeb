@@ -49,7 +49,7 @@ sobre outra coisa.
 
 O `.env.test` é **versionado**: não há segredo nele, o banco é descartável e a
 senha é a do administrador que o próprio harness cria (`ADMIN_DE_TESTE`, em
-`tests/setup/database.ts` — o seed não cria conta). Quem clonar o repositório roda `bun run test` sem
+`tests/setup/admin-de-teste.ts`, que o `tests/setup/database.ts` cria — o seed não cria conta). Quem clonar o repositório roda `bun run test` sem
 configurar nada (só precisa do Postgres de pé: `docker compose up -d`).
 
 ---
@@ -163,9 +163,9 @@ licença e os seus alvos quando vai mudá-los: rodado sozinho com `-t`, ele pass
   tem que perder pela regra, com a frase dela — o 409 genérico da FK passaria sem a trava.
 
 
-### `descoberta/` — a única pasta que fala WebSocket
+### `descoberta/` — o agente pelo WebSocket
 
-Onze arquivos. O vínculo não infere pessoa pela conta do sistema operacional
+Doze arquivos. O vínculo não infere pessoa pela conta do sistema operacional
 ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) —
 o que resta é o vínculo entre máquina e computador, pela série:
 

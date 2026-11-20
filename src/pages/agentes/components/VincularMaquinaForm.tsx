@@ -6,13 +6,13 @@ import { Dado, GradeDeDados } from '../../../components/ui/dado';
 import { useNotificacao } from '../../../hooks/useNotificacao';
 import type { Endpoint } from '../../../types/endpoint.types';
 
-// VINCULAR UMA MÁQUINA A UM ATIVO, À MÃO — e, se quiser, entregar o ativo ao
+// VINCULAR UMA MÁQUINA A UM COMPUTADOR, À MÃO — e, se quiser, entregar o computador ao
 // posto na mesma ida.
 //
 // O painel repete o sistema e a série, porque a pessoa decide olhando a máquina
 // que vai vincular, e ele cobre a linha dela. O computador já vem escolhido
 // quando a máquina tem dica, a mesma série ou o mesmo nome (DC); quem confirma
-// é a pessoa. Dois campos: o ativo (obrigatório)
+// é a pessoa. Dois campos: o computador (obrigatório)
 // e o posto (opcional). Com posto, a operação é a de vincular-e-entregar, que o
 // servidor encadeia; sem, é só o vínculo.
 //
@@ -22,7 +22,7 @@ import type { Endpoint } from '../../../types/endpoint.types';
 // de Computadores: o posto que já tem computador recusa a entrega.
 //
 // Não fala HTTP: recebe `onVincular` e mostra o que ele rejeitar. O erro mora
-// AQUI porque é aqui que a pessoa decide — "este posto já tem um ativo"
+// AQUI porque é aqui que a pessoa decide — "este posto já tem um computador"
 // precisa aparecer ao lado do campo onde ela escolheu o posto.
 
 interface Props {

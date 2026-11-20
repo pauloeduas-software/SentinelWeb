@@ -67,7 +67,7 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'GET /api/assets/:id/history': { tag: 'Computadores', resumo: 'O histórico do computador' },
   'GET /api/assets/:id/components': { tag: 'Computadores', resumo: 'Os componentes de estoque entregues a ele' },
   'GET /api/assets/:id/licenses': { tag: 'Computadores', resumo: 'As licenças entregues a ele' },
-  'GET /api/assets/:id/machine': { tag: 'Computadores', resumo: 'A máquina que o agente descobriu e está vinculada a ele' },
+  'GET /api/assets/:id/machine': { tag: 'Computadores', resumo: 'A máquina vinculada a ele' },
   'POST /api/assets': { tag: 'Computadores', resumo: 'Cadastra um computador', body: createAssetSchema, status: 201 },
   'PUT /api/assets/:id': { tag: 'Computadores', resumo: 'Edita o computador (formulário inteiro)', body: updateAssetSchema },
   'DELETE /api/assets/:id': { tag: 'Computadores', resumo: 'Manda o computador para a lixeira' },
@@ -120,9 +120,9 @@ export const CONTRATO: Record<string, ContratoDaRota> = {
   'PATCH /api/licenses/checkouts/:id': { tag: 'Licenças', resumo: 'Troca a chave de uma entrega', body: checkoutKeySchema },
 
   // ── Agentes ──────────────────────────────────────────────────────────
-  'GET /api/endpoints': { tag: 'Agentes', resumo: 'As máquinas que o agente descobriu (?vista=com|sem|sumidos)', query: 'lista' },
-  'GET /api/endpoints/:id': { tag: 'Agentes', resumo: 'A máquina descoberta' },
-  'POST /api/endpoints/:id/command': { tag: 'Agentes', resumo: 'Manda um comando à máquina (desligar, reiniciar)', body: sendCommandSchema },
+  'GET /api/endpoints': { tag: 'Agentes', resumo: 'As máquinas com o agente (?vista=com|sem|sumidos)', query: 'lista' },
+  'GET /api/endpoints/:id': { tag: 'Agentes', resumo: 'Uma máquina' },
+  'POST /api/endpoints/:id/command': { tag: 'Agentes', resumo: 'Manda um comando à máquina (desligar, reiniciar, suspender)', body: sendCommandSchema },
   'POST /api/endpoints/:id/refresh': { tag: 'Agentes', resumo: 'Pede o inventário e a telemetria agora, e espera a resposta do agente' },
   'DELETE /api/endpoints/:id': { tag: 'Agentes', resumo: 'Exclui a máquina e revoga o token do agente dela' },
   'POST /api/endpoints/:id/link': { tag: 'Agentes', resumo: 'Vincula a máquina a um computador', body: vinculoSchema, status: 201 },

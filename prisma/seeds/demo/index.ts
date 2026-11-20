@@ -1,8 +1,8 @@
-// SEED DE DEMONSTRAÇÃO — `npm run db:seed:demo`.
+// SEED DE DEMONSTRAÇÃO — `bun run db:seed:demo`.
 //
 // Separado do seed principal (`../index.ts`) de propósito. Aquele roda em todo
 // banco — produção incluída — e antes de cada arquivo de teste, e por isso só
-// semeia o que é do SOFTWARE (categorias, status, configuração).
+// semeia o que é do SOFTWARE (categorias, status, motivos da baixa, configuração).
 // Fabricante, localização e modelo são dado da EMPRESA: semear "Dell" no banco
 // de um cliente é adivinhar o parque dele (`categorias.seed.ts`).
 //

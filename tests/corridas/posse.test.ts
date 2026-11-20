@@ -52,8 +52,8 @@ describe('duplo checkout simultâneo do mesmo ativo', () => {
       }),
     ]);
 
-    // É o índice único parcial que pega isto — qualquer `if` no use-case
-    // deixaria os dois passarem.
+    // É a trava do ativo, e embaixo dela o índice único parcial, que pega isto —
+    // um `if` sem a trava deixaria os dois passarem.
     expect(placar(respostas)[201]).toBe(1);
 
     const abertas = await prisma.assignment.count({

@@ -94,8 +94,8 @@ export function useFichaDoComputador() {
    * pela qual o modal foi aberto.
    *
    * Clonar leva à tela do ativo NOVO. Ficar no antigo depois de clonar seria a
-   * tela mentindo sobre o que acabou de acontecer — e o clone nasce sem
-   * etiqueta e sem série, que são justamente os campos a preencher em seguida.
+   * tela mentindo sobre o que acabou de acontecer — e o clone nasce com a
+   * etiqueta automática e sem série, que é justamente o campo a preencher em seguida.
    */
   const handleSubmit = async (valores: AssetInput) => {
     if (modal === 'clonar') {
@@ -197,7 +197,7 @@ export function useFichaDoComputador() {
     voltar,
     asset,
     carregando: isPending,
-    // A busca engole o erro na listagem, mas aqui ele é a tela inteira: um
+    // Na listagem o erro fica no lugar da tabela, mas aqui ele é a tela inteira: um
     // 404 de URL colada precisa dizer que o ativo não existe, não ficar
     // carregando para sempre.
     erro: erroDaFicha(error, asset != null, 'o computador'),

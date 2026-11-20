@@ -36,7 +36,7 @@ interface SentCommand {
  * resolve, e é a chave que todo o resto do sistema já usa para falar de uma
  * máquina (`:id/link`).
  *
- * Isto NÃO é esconder o hwid: ele continua saindo na listagem e na rota de uma
+ * Isto NÃO é esconder o hwid: ele continua saindo na rota de uma
  * máquina, porque é coluna do `Endpoint`, e a aba Máquina do ativo o mostra com
  * um botão de copiar — é o que se cola num chamado. O que sai da URL é a
  * identidade do agente como ENDEREÇO, e com ela sai o `{ hwid }` que o

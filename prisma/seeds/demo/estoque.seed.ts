@@ -5,7 +5,7 @@ import { mesmoNome } from './garantir-por-nome';
 // ITENS DE ESTOQUE DE EXEMPLO — o que qualquer empresa tem na prateleira, como
 // se tivessem acabado de ser cadastrados: ativos, com o total e sem entrega.
 //
-// Um ou dois por categoria de estoque, de componente e de consumível
+// De um a quatro por categoria de estoque, de componente e de consumível
 // (`categorias.seed.ts`), todos guardados no Depósito de TI.
 const LOCAL = 'Depósito de TI';
 

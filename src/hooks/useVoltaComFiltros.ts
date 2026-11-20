@@ -21,8 +21,8 @@ export function comFiltros(parametros: URLSearchParams) {
 
 /**
  * O `state` de uma ficha que abre outra: a seta de lá volta para cá, na mesma aba, e a
- * daqui continua sabendo de onde veio (BJ). A cadeia não cresce: quem abre o posto pela
- * ficha do computador não repassa o `state`.
+ * daqui continua sabendo de onde veio (BJ). Cada ficha aberta assim guarda a anterior dentro
+ * do `state`, e a seta desfaz um nível de cada vez.
  */
 export function useVoltaParaEstaFicha(): EstadoDaVolta {
   const { pathname, search, state } = useLocation();

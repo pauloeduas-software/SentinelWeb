@@ -4,10 +4,10 @@ import { createLogger } from '../logger/logger';
 // A JANELA DE EXECUÇÃO DE UM JOB — o D79 em código.
 //
 // Infraestrutura: recebe o NOME do job por parâmetro e não sabe o que é uma
-// reconciliação ou um expurgo. É por isso que mora em `core`.
+// reconciliação ou um expurgo. É por isso que mora em `infra`.
 //
 // O QUE ELA RESOLVE: `setInterval` sozinho não sobrevive a deploy. O
-// `zombie-cleaner.job.ts` reinicia o contador a cada `npm start`, e para um job
+// `zombie-cleaner.job.ts` reinicia o contador a cada `bun run start`, e para um job
 // que roda a cada minuto isso é inofensivo. Para um que roda UMA VEZ POR
 // JANELA (o expurgo da telemetria, uma vez por dia), não é: ele roda já no
 // boot, e subir o servidor três vezes no mesmo dia expurgaria três vezes.

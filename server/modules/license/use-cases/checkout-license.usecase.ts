@@ -217,7 +217,7 @@ export async function checkoutLicense(licenseId: string, data: CheckoutLicenseDa
     // ORDEM DE TRAVAMENTO: **alvo, depois licença** (`lock-license.usecase.ts`).
     // A trava do alvo protege a contagem que a desativação do colaborador e a
     // baixa do ativo leem; a da licença, a conta de livres.
-    // O ativo inexistente diz "Ativo", como o colaborador diz "Colaborador".
+    // O ativo inexistente diz "Computador", como o colaborador diz "Colaborador".
     if (alvo.tipo === 'PERSON') await travarPessoaOuFalhar(tx, alvo.id);
     else if (!(await travarAtivo(tx, alvo.id))) throw new AppError('Computador não encontrado.', 404);
 

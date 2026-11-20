@@ -14,8 +14,9 @@ const logger = createLogger('agent.enroll');
  * ═══════════════════════════════════════════════════════════════════════════
  * O RECADASTRO TROCA O TOKEN, MENOS COM A MÁQUINA CONECTADA.
  *
- * O agente que perdeu o token (revogado, recusado com 401) volta com o mesmo
- * HWID e o segredo de instalação: por isso o cadastro de um HWID conhecido
+ * A máquina que perdeu o token (revogado, recusado com 401) volta com o mesmo
+ * HWID quando alguém põe o segredo de instalação nela de novo: o agente não se
+ * recadastra sozinho. Por isso o cadastro de um HWID conhecido
  * substitui o token antigo, que para de valer na hora. A máquina formatada vem
  * com HWID novo, e quem a reconhece é o handshake (CV).
  *

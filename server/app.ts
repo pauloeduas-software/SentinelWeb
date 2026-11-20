@@ -73,8 +73,8 @@ const logger = createLogger('app');
 // esta lista é a exceção inteira (docs/referencia/acesso.md).
 //
 // Ela mora aqui, e não dentro de `infra/http/require-auth.ts`, porque saber que
-// o `/agent-hub` tem autenticação própria é conhecimento de NEGÓCIO — e `core`
-// não importa `domain`. Rota nova nasce protegida: quem quiser abrir uma
+// o `/agent-hub` tem autenticação própria é conhecimento de NEGÓCIO — e `infra`
+// não importa `modules`. Rota nova nasce protegida: quem quiser abrir uma
 // escreve a linha e o motivo aqui, onde a decisão fica visível na revisão.
 const ROTAS_PUBLICAS: readonly RotaPublica[] = [
   { method: 'GET', path: '/health', motivo: 'liveness do container, que não tem sessão' },
@@ -157,7 +157,7 @@ export async function buildApp(
     // `FastifyInstance` comum como parâmetro.
     loggerInstance: rootLogger as FastifyBaseLogger,
     // O log automático do Fastify são DUAS linhas por requisição; com o painel
-    // consultando a cada 5s isso vira ruído. Quem loga é o nosso hook, uma linha.
+    // consultando a cada 30s isso vira ruído. Quem loga é o nosso hook, uma linha.
     logController: new LogController({ disableRequestLogging: true }),
     // Id da requisição (devolvido em X-Request-Id) sempre pelo nosso gerador
     requestIdHeader: false,
@@ -322,7 +322,7 @@ export async function buildApp(
   // LANÇA quando há rota sem exigência declarada, e lançar é o ponto inteiro:
   // um `logger.error` no boot é um erro que o deploy ignora, e a consequência de
   // ignorá-lo é uma rota que qualquer sessão alcança sem ninguém ter decidido
-  // isso. Aqui, o processo não sobe e o `npm test` fica vermelho na hora.
+  // isso. Aqui, o processo não sobe e o `bun run test` fica vermelho na hora.
   guardaDePermissao.verificarCobertura();
 
   // `ready()` força o Fastify a resolver o grafo de plugins AGORA, aqui dentro.

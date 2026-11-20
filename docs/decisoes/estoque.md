@@ -220,6 +220,8 @@ que mostrá-la. A cor do saldo na tela usa `<= 0`, não `=== 0`, por este motivo
 > perdem a ligação e guardam o nome por escrito. Só o item com unidade em uso recusa, e o 409 diz
 > com quem. O Desativar continua, para o que se quer guardar.
 
+> **Supera em parte:** [V](./posse.md#v--excluir-não-apaga-o-passado-localização-por-referência-colaborador-pela-lixeira) (a lixeira do item na contagem da localização).
+
 **Decidido** (na padronização do Estoque com a Licença, em 2026-10-26 — o usuário pediu que o
 estoque funcionasse como a licença, item a item, e respondeu cada ponto em que os dois
 divergiam; e, no mesmo dia, que o ativar, o desativar e o excluir seguissem o padrão das

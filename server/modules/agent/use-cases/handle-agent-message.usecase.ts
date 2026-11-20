@@ -12,8 +12,8 @@ import { createLogger } from '../../../infra/logger/logger';
 const logger = createLogger('agent.message');
 
 // Roteia a mensagem já traduzida para o use-case do domínio dono do assunto.
-// É a única função que conhece os três tipos de mensagem do agente — quem
-// quiser saber o que o agente faz lê este arquivo.
+// É a única função que roteia os três tipos de mensagem do agente — quem
+// quiser saber o que o servidor faz com cada uma lê este arquivo.
 export async function handleAgentMessage(message: ParsedAgentMessage): Promise<void> {
   // Presença primeiro: qualquer mensagem prova que a máquina está viva, mesmo
   // que o tratamento específico abaixo falhe.

@@ -94,13 +94,13 @@ export const stockController = {
     return reply.status(201).send(resultado);
   },
 
-  /** 200: a devolução FECHA unidades que já existiam. O `:id` é o de uma unidade da ENTREGA. */
   /** Os componentes instalados num computador — a aba Componentes (AI). */
   async doAtivo(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return listAssetComponents(id, temCargo(request, 'SUPERVISOR'));
   },
 
+  /** 200: a devolução FECHA unidades que já existiam. O `:id` é o de uma unidade da ENTREGA. */
   async checkin(request: FastifyRequest) {
     const { id } = idParamSchema.parse(request.params);
     return checkinStock(id, checkinStockSchema.parse(request.body ?? {}), atorDaRequisicao(request));

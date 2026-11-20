@@ -23,7 +23,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 
 ---
 
-## As dezoito
+## As dezessete
 
 > **A numeração salta de propósito.** Invariante que saiu não volta, e as que ficaram não se
 > renumeram: o código cita os números, e um número que muda de significado é pior que um número
@@ -43,7 +43,7 @@ dar a mensagem boa, o índice fica atrás para pegar a corrida.
 | 19 | No máximo um ativo por posto de trabalho, também no passado | **aplicação** — a porta da entrega (`ativoDoPosto()`, com `FOR UPDATE` na linha do posto), que também não começa antes da última devolução no posto; **banco** — índice único parcial `assignments_um_aberto_por_posto` | 409 `Este posto de trabalho já tem um computador: ATV-00042 (Dell OptiPlex). Faça a devolução dele antes.`; 422 `A entrega (01/03/2026) não pode ser antes da última devolução no posto Mesa 1: ATV-00042 saiu dele em 10/06/2026, e o posto tem um computador por vez.` |
 | 20 | Ativo baixado ou na lixeira não tem posse aberta, licença, componente nem máquina | **aplicação** — quatro portas: a baixa e a lixeira (`assertSemPosse`, as contagens de licenças e de componentes e `assertSemMaquina`), a entrega (`checkout-asset`, `checkout-license`, `checkout-stock`) e o vínculo (`link-endpoint-asset`), todas com o ativo travado | 409 `ATV-00042 teve baixa em 15/10/2026 e não pode ser entregue. Reverta a baixa antes.` |
 | 22 | O que está em uso nunca passa da quantidade comprada | **aplicação** — a entrega e a edição contam com a linha da licença travada (`lock-license.usecase.ts`) | 409 `Sem licença livre em "Office 2024": 5 compradas, 5 em uso. Devolva uma entrega ou aumente a quantidade comprada.` |
-| 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `"Office 2024" já está entregue a Laura Souza.` (a API confere antes) |
+| 23 | Uma entrega aberta por alvo e licença | **banco** — dois índices únicos parciais, um por alvo. No passado, a entrega que se sobrepõe à última devolução do mesmo alvo é só da **aplicação** (422) | 409 `"Office 2024" já está entregue a Laura Souza. Uma licença vai uma vez para cada computador ou colaborador.` (a API confere antes) |
 | 24 | A chave da entrega é uma das chaves da licença; nenhuma chave vai para mais entregas abertas do que cobre; e as chaves cobrem no máximo o que foi comprado | **banco** — a FK composta (chave, licença) e os `CHECK`s da chave. A conta de cada chave e a soma contra o comprado são da **aplicação**, com a licença travada | 409 `Esta chave já está em outra entrega aberta de "Office 2024". Escolha outra.` / 422 `As chaves cobrem 12, mais do que 10 compradas em "Office 2024". …` |
 | 25 | A forma da entrega de estoque, e o que está em uso nunca passa do total | **banco** — o CHECK do total (`stock_items_qty_nao_negativa`), os cinco `CHECK` da linha e a FK `Restrict` para o item. A conta contra o total é da **aplicação**, com a linha do item travada | 409 `Sem unidade disponível de "Mouse USB": 10 no total, 10 em uso. Devolva uma unidade ou aumente o total.` / `Não é possível reduzir "Mouse USB" para 1: 2 estão em uso. Devolva para liberar.` |
 | 26 | O baixado não vai para a lixeira | **banco** — o `CHECK` `assets_baixado_fora_da_lixeira`; a **aplicação** confere antes, com o ativo travado (`delete-asset`) | 409 `ATV-00042 teve baixa e não vai para a lixeira. Reverta a baixa antes.` |
@@ -295,8 +295,8 @@ ligação, com o nome por escrito em `licenseName` e sem a chave — as chaves v
 licença, e a FK composta da chave, com `licenseId` nulo, não conferiria mais nada
 ([AG](../decisoes/estoque.md#ag--a-regra-do-posto-vale-para-o-estoque-e-a-licença-só-o-que-está-em-uso-impede-a-exclusão)).
 
-A aplicação recusa antes, com 422 e a frase que ensina o modelo (*"Posto de trabalho não é
-alvo de licença — entregue ao computador que está no posto"*, D39); os CHECKs são a rede para quem
+A aplicação recusa antes, com 422 e a frase que ensina o modelo (*"Posto não recebe licença:
+entregue ao computador que está no posto"*, D39); os CHECKs são a rede para quem
 não passa pelo use-case.
 
 > **Provado em** `tests/licencas/invariantes.test.ts`, por `INSERT` cru — como a #5 em
@@ -312,7 +312,7 @@ assetId String? @unique @db.Uuid
 
 O 1:1 do D45, garantido pelo banco e não pela aplicação. Ele existe porque a
 alternativa não é "duas máquinas no mesmo ativo": é **duas verdades sobre a mesma
-máquina** — dois `hostname`, dois inventários de software, duas datas de último
+máquina** — dois `hostname`, dois inventários, duas datas de último
 contato, e nenhuma forma de saber qual vale.
 
 O caso que ele pega de verdade é a **reimagem que não foi reconhecida**: a máquina
@@ -437,7 +437,7 @@ A entrega de **licença** a ativo (`checkout-license.usecase.ts`) e a de
 a licença ou a peça ficaria presa a uma máquina que não existe mais.
 
 **A máquina** seguiria na cobertura de quem saiu, com a telemetria e os comandos de
-reiniciar e desligar. A recusa da baixa e da lixeira leva a Agentes, onde mora o
+desligar, reiniciar e suspender. A recusa da baixa e da lixeira leva a Agentes, onde mora o
 Desvincular (`assertSemMaquina`, em `get-asset-machine.usecase.ts`).
 
 **Bloqueia, nunca fecha a posse sozinha** — o mesmo argumento da invariante 4.
@@ -625,7 +625,7 @@ CREATE UNIQUE INDEX "assets_serial_unique_undeleted"
   ON "assets"(lower("serial")) WHERE "deletedAt" IS NULL;
 ```
 
-A etiqueta é como a empresa acha o computador, e a série é como o agente o acha. Repetidas,
+A etiqueta é como a empresa acha o computador, e a série é como o servidor liga a máquina a ele. Repetidas,
 as duas apontam para dois cadastros: a busca traz os dois, e o vínculo com a máquina fica sem
 dono.
 

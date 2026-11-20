@@ -15,7 +15,7 @@ import type { Cobertura, MaquinaDoAtivo } from '../types/reconciliation.types';
 //
 // E o invalidate vai ALÉM do prefixo, de propósito: o vínculo máquina↔ativo
 // muda as duas pontas. Quem não invalidasse `assets` e `endpoints` junto
-// deixaria a aba Máquina do ativo vazia até alguém recarregar a página.
+// deixaria a aba Máquina do computador vazia até alguém recarregar a página.
 
 const reconciliationKeys = {
   all: ['reconciliation'] as const,
@@ -72,7 +72,7 @@ export function useDesvincularMaquina() {
 
 /**
  * EXCLUIR A MÁQUINA — `DELETE /api/endpoints/:id` (DD). O servidor apaga a linha
- * e a credencial do agente, e fecha a conexão: ela só volta reinstalada. Muda a
+ * e a credencial do agente, e fecha a conexão: ela só volta com o agente cadastrado de novo. Muda a
  * cobertura (os Sumidos), por isso invalida tudo.
  *
  * A consulta da máquina excluída não revalida: a ficha dela (DF) ainda está na tela

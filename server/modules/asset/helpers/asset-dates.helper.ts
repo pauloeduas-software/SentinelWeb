@@ -5,7 +5,7 @@ import { AppError } from '../../../infra/errors/app-error';
 /**
  * A data como o Brasil a lê — para MENSAGEM, nunca para gravar.
  *
- * Em UTC pelo mesmo motivo de `adicionarMeses`: `retiredAt` e `purchaseDate`
+ * Em UTC: `retiredAt` e `purchaseDate`
  * são dia de calendário, e `toLocaleDateString` local devolveria o dia anterior
  * num fuso a oeste de Greenwich. O 409 diria a data errada.
  */

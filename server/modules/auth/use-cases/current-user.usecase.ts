@@ -12,7 +12,7 @@ import type { SessionUser } from '../auth.types';
  * linha (W), então aqui o excluído simplesmente não é encontrado.
  *
  * `isActive: false` (desativado) cai junto: quem saiu da empresa continua
- * no histórico de posse e nos relatórios, mas não opera mais.
+ * na lista de Usuários, mas não opera mais.
  *
  * O `select` é o `USER_PUBLIC_SELECT`, o mesmo de toda rota que devolve
  * usuário: é ele que garante que `passwordHash`, `failedLoginCount` e
@@ -23,8 +23,7 @@ import type { SessionUser } from '../auth.types';
  *
  * Existe separado, e o `tokenVersion` NÃO entra no `USER_PUBLIC_SELECT`, porque
  * aquela allowlist é o contrato do que sai para o cliente: um mecanismo interno
- * de sessão não tem o que fazer no corpo de `/api/auth/me` nem embutido em toda
- * posse de ativo. Aqui o número é lido, comparado e descartado — quem segue
+ * de sessão não tem o que fazer no corpo de `/api/auth/me`. Aqui o número é lido, comparado e descartado — quem segue
  * viagem para `request.user` é só a parte pública.
  *
  * Uma consulta só, e não duas: a releitura por requisição já era o caminho

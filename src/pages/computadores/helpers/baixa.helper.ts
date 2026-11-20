@@ -9,8 +9,8 @@ import { formatarData } from '../../../helpers/format.helper';
 //   retiredAt  saiu do PATRIMÔNIO  (fato datado: vendido, roubado)
 //   deletedAt  foi cadastrado ERRADO (lixeira)
 //
-// Este arquivo cuida da primeira, e o vocabulário da tela vem daqui para as três
-// telas que a mostram (listagem, detalhe e modal) dizerem a mesma coisa.
+// Este arquivo cuida da primeira, e o vocabulário da tela vem daqui para as duas
+// telas que a mostram (listagem e ficha) dizerem a mesma coisa.
 
 /**
  * "Vendido" — o status do baixado, na lista e no card (BV). O dia fica no aviso da ficha.

@@ -9,7 +9,7 @@
 >
 > Decisões neste arquivo: D143–D164, O (segunda rodada, numerada por letra — ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)) e Q (a varredura do código morto, que veio
-> depois e continuou a letra).
+> depois e continuou a letra) e DM.
 
 ---
 
@@ -18,14 +18,14 @@
 **Decidido:** sobrevive o que serve ao núcleo ITAM ou à ponte ITAM×RMM. Todo o resto sai.
 **Descartado:** cortar a convergência.
 
-O projeto cresceu até 72.355 linhas de aplicação — porte de produto comercial, não
-de TCC. A redução óbvia era cortar a metade RMM: `reconciliation` é o maior domínio do sistema
+O projeto cresceu até 72.355 linhas de aplicação — porte de produto comercial, maior do que o
+escopo pede. A redução óbvia era cortar a metade RMM: `reconciliation` é o maior domínio do sistema
 (4.242 linhas) e o assunto com mais decisões (35), e sem ele sobrava um ITAM limpo e defensável.
 
-**Por quê não:** a convergência **é** a contribuição do trabalho. Um ITAM que só registra o que
+**Por quê não:** a convergência **é** o diferencial do sistema. Um ITAM que só registra o que
 alguém digitou é um CMDB manual, e existem dezenas. O que não existe é o cruzamento entre o que a
 empresa comprou e o que o agente encontra instalado — e é dele que saem a conformidade de licença
-(D102, D117) e a conferência automática (D124). Cortar o RMM deixaria o trabalho sem tese.
+(D102, D117) e a conferência automática (D124). Cortar o RMM deixaria o sistema sem diferencial.
 
 **O que isso obriga:** o corte sai inteiro das outras duas camadas — paridade com o Snipe-IT que
 ninguém pediu, e plumbing de empresa grande. O critério é uma pergunta só: *isto serve ao núcleo
@@ -70,8 +70,8 @@ morava na spec de catálogo (D64).
 [D58–D64](./campos-customizados.md) — as oito decisões do assunto.
 
 **Por quê:** é a feature mais caramente genérica do projeto — 2.045 linhas de servidor, 933 de
-tela e 2.252 de teste para que um administrador defina colunas que nós não sabemos quais são. Num
-TCC não existe esse administrador: quem decide os campos do ativo somos nós, e decidir isso em
+tela e 2.252 de teste para que um administrador defina colunas que nós não sabemos quais são. Aqui
+não existe esse administrador: quem decide os campos do ativo somos nós, e decidir isso em
 `schema.prisma` custa uma linha.
 
 **Duas decisões ficam sem objeto, e não são apagadas:**
@@ -99,8 +99,8 @@ regra inteira, sem a exceção que o D140 abriu.
 
 **Por quê:** importar planilha é o jeito de popular o inventário quando nada te conta o que
 existe. O agente conta. Pelo D143, ter as duas é manter dois caminhos para o mesmo trabalho, e o
-que sai é o que não é a tese. A carga inicial do que o agente **não** vê (periférico, mobiliário)
-passa a ser formulário e `seed` — que é o que um TCC demonstra de todo jeito.
+que sai é o que não é a ponte. A carga inicial do que o agente **não** vê (periférico, mobiliário)
+passa a ser formulário e `seed`.
 
 ---
 
@@ -148,8 +148,8 @@ pessoal. O `/agent-hub` autentica por `AGENT_TOKEN` do `.env`.
 [D142](./acesso.md#d142--api_tokensuserid-ganha-fk-antes-de-existir-token-pessoal).
 
 **Por quê:** o D89 era uma migração com prazo — sair do segredo único no `.env` para um token por
-agente, revogável. É a decisão certa para uma frota de verdade e irrelevante para uma banca: não
-existe integração de terceiro para autenticar, e o agente da demonstração é um. O prazo do D89
+agente, revogável. É a decisão certa para uma frota grande e desnecessária aqui: não
+existe integração de terceiro para autenticar, e o agente é um. O prazo do D89
 expira sem ser cumprido, e isso fica escrito aqui em vez de virar dívida silenciosa.
 
 ---
@@ -259,7 +259,7 @@ licenças e estoque — cada um com export.
 **Mantém:** [D66](./relatorios-import-etiquetas.md#d66--responsável-resolvido-é-uma-view-não-coluna-nem-cache)/[D129](./relatorios-import-etiquetas.md#d129--a-view-devolve-responsável-real-e-fala-a-língua-da-tela)/[D130](./relatorios-import-etiquetas.md#d130--posto-vago-continua-saindo-do-posto_vago) — a
 view do responsável, que as listagens também leem — e o D138.
 
-**Por quê:** 2.948 linhas para montar consultas que, num TCC, são três. O D67 existia para que o
+**Por quê:** 2.948 linhas para montar consultas que, escritas à mão, são três. O D67 existia para que o
 builder nunca recebesse SQL nem nome de campo cru; com as consultas escritas à mão a superfície
 desaparece em vez de ser defendida, o que é o jeito mais forte de resolver o problema dele.
 
@@ -288,7 +288,7 @@ pelo mesmo raciocínio do D143 que manteve o RMM e cortou o resto.
 **Mantém:** o modelo `Department`.
 
 **Por quê o portal:** ele mostra ao colaborador o que está no nome dele — uma segunda tela sobre
-dados que a tela de posse já mostra, para um perfil de usuário que a banca não vai usar. O D141
+dados que a tela de posse já mostra, para um perfil de usuário que o sistema não tem. O D141
 estava certo sobre o **nome** (a tela se chama pelo que lista); o que cai é a tela.
 
 **Por quê o backup:** rotina de operação, não funcionalidade. `pg_dump` resolve numa linha de
@@ -368,8 +368,8 @@ já mostra, ou sobre processo que não é inventário. `/descobertas` é a únic
 motor pronto e **inalcançável pela tela**, achou "três entregas inteiras nesse estado", e as
 [D113](./reconciliacao.md#d113--o-turno-é-a-moda-dos-turnos-não-a-média-das-horas)–[D122](./reconciliacao.md#d122--assetsuggestions-e-não-o-nome-que-o-prisma-format-escreveu)
 nasceram para consertar isso. Cortar a tela agora seria reintroduzir, de propósito, o problema que
-dez decisões já pagaram para resolver — e deixaria o trabalho sem o que demonstrar na defesa,
-porque é nesta tela que a convergência **acontece** na frente de quem assiste.
+dez decisões já pagaram para resolver — e deixaria a convergência sem tela,
+porque é nesta tela que ela **acontece** para quem usa.
 
 **O que isso preserva, e é o D143:** o critério continua sendo a ponte ITAM×RMM. As quatro que
 saem não a atravessam; esta é a ponte.
@@ -518,6 +518,8 @@ quando a coluna governa acesso, é uma escrita em massa que se tranca para fora.
 > **Superada em parte pelo commit `ff34364`:** `parentId` e `managerId` saem: a lista é plana, e o nome único diz onde o lugar fica.
 >
 > **E pela [CO](./catalogo-e-ativo.md#co--a-garantia-do-computador-volta-só-a-data):** a data da garantia volta ao computador; os meses, o fim de vida e o cálculo continuam fora.
+
+> **Supera em parte:** [D93](./licencas.md#d93--assento-é-posse-e-a-posse-do-projeto-já-tem-três-lugares) (o `offboard`).
 
 **Decidido:** mais uma leva de corte, pelo MESMO critério do D143, aplicado sem a folga que a
 primeira rodada deu a alguns itens. Saem, numa leva de 49 arquivos (331 testes passando depois

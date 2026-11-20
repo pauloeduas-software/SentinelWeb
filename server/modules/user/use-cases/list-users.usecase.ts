@@ -10,8 +10,7 @@ function buscarPagina(where: object, query: ListQuery) {
   return prisma.user.findMany({
     where,
     // `USER_LIST_SELECT` e não o público: a listagem de pessoas mostra colunas
-    // que não têm o que fazer no select que viaja embutido em toda posse e toda
-    // ocupação (D135).
+    // que não têm o que fazer no select que vai na sessão (D135).
     select: USER_LIST_SELECT,
     // Por NOME: é como se procura uma pessoa numa lista. O `id` desempata
     // homônimos, para a paginação não repetir nem pular ninguém.

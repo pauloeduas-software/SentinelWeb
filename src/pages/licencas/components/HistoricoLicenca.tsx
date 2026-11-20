@@ -5,8 +5,8 @@ import type { EventoDaLicenca } from '../../../types/license.types';
 import { formatarDiaDoInstante } from '../../../helpers/format.helper';
 import { ACOES_DA_LICENCA } from '../helpers/licenca.helper';
 
-// POR ONDE A LICENÇA PASSOU — entregas e devoluções, e mais nada: o sistema não
-// tem trilha de cadastro e edição.
+// POR ONDE A LICENÇA PASSOU — entregas e devoluções, e mais nada: o cadastro e a
+// edição ficam só na auditoria, no banco (AB).
 
 interface HistoricoLicencaProps {
   /** Uma página, do mais recente para o mais antigo. */

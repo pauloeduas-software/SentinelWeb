@@ -9,9 +9,9 @@ import { CARGOS, ehCargo, NOME_DO_CARGO, cargoAlcanca, type Cargo } from './carg
 // QUAL cargo a rota exige. Aqui só se responde se a sessão o alcança — e o que
 // acontece quando não.
 //
-// O NOME DO ARQUIVO E DO EXPORT FICARAM: o guard do `core` recebe
+// O NOME DO ARQUIVO E DO EXPORT FICARAM: o guard da `infra` recebe
 // `autorizar: (request, exigencia: string) => void` e não sabe se a exigência é
-// uma chave de permissão ou um cargo. Renomear aqui obrigaria a mexer no `core`
+// uma chave de permissão ou um cargo. Renomear aqui obrigaria a mexer na `infra`
 // para nada — a inversão do D137 continua valendo palavra por palavra.
 
 const logger = createLogger('require-permission');
@@ -19,7 +19,7 @@ const logger = createLogger('require-permission');
 /**
  * A sessão alcança este cargo? Sem lançar — para quem precisa DECIDIR, não barrar.
  *
- * É o que os `select` por cargo usam (D77): o use-case da listagem de ativos
+ * É o que os `select` por cargo usam (D77): o controller da listagem de ativos
  * pergunta `temCargo(request, 'SUPERVISOR')` para escolher o select com ou sem custo,
  * e não para recusar a requisição.
  */

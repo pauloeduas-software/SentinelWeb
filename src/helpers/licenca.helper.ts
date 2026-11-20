@@ -2,7 +2,7 @@ import type { EntregaDoAlvo, Licenca, StatusDaLicenca } from '../types/license.t
 import { formatarMoeda } from './format.helper';
 
 // A LICENÇA LIDA EM TEXTO — funções puras compartilhadas pelas três telas que
-// mostram licença: a de Licenças, a aba Licenças do ativo e a ficha do
+// mostram licença: a de Licenças, a aba Licenças do computador e a ficha do
 // colaborador. Moram aqui, e não em `licencas/helpers`, para as três dizerem a
 // mesma frase.
 

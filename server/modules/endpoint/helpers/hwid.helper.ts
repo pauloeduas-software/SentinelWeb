@@ -1,6 +1,6 @@
-// O HWID é o id da instalação do agente (CV) e chega com grafia instável
-// (maiúsculas, espaço em volta). Toda leitura e toda escrita passam por aqui —
-// senão a mesma máquina vira dois registros no banco.
+// O HWID é o id da instalação do agente (CV). O agente o manda em minúsculas, e
+// a normalização é defesa: toda leitura e toda escrita passam por aqui, e uma
+// maiúscula ou um espaço em volta não fazem da mesma máquina dois registros.
 export function sanitizeHwid(hwid: string): string {
   return hwid.trim().toLowerCase();
 }

@@ -37,7 +37,7 @@ export class ReconciliationMaestro {
     );
 
     // A ABA MÁQUINA. Pendura em `/api/assets/:id` como as rotas de ocupação
-    // fazem com `/api/locations`: a pergunta "o que é esta máquina" é do ativo,
+    // fazem com `/api/workstations`: a pergunta "o que é esta máquina" é do ativo,
     // mas a resposta só existe porque os dois lados se falam.
     //
     // `/machine` e não o nome de um dos conteúdos: ela devolve qual máquina está

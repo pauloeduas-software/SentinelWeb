@@ -42,7 +42,7 @@ const logger = createLogger('auditoria');
 //
 // `LOGIN`, `LOGOUT` e `LOGIN_FAILED` são a entrada e a saída de uma conta; a
 // falha leva o motivo ('senha', 'bloqueada', 'desativada'). `COMMAND` é a ordem
-// mandada à máquina (desligar, reiniciar). `REINSTALL` é a máquina
+// mandada à máquina (desligar, reiniciar, suspender, atualizar). `REINSTALL` é a máquina
 // reinstalada que herdou a própria linha com o HWID novo (CV), gravada pelo sistema.
 //
 // A UNIÃO LISTA O QUE O SISTEMA GRAVA, e nada além. A coluna é `String` no
@@ -57,10 +57,6 @@ type AuditAction =
 
 interface RecordAuditInput {
   entityType: string;
-  /**
-   * Nulo só no que não é UM registro: a configuração da descoberta (uma linha
-   * única, sem uuid) e a rodada de reconciliação.
-   */
   entityId: string | null;
   /**
    * O registro POR ESCRITO — a etiqueta do ativo, o nome do item, do posto. É
@@ -102,7 +98,7 @@ export async function recordAudit(
 
 /**
  * A linha de algo que JÁ ACONTECEU fora do banco e não volta atrás: o comando
- * que saiu para a máquina, a rodada que terminou, a sessão que está saindo.
+ * que saiu para a máquina, a sessão que está saindo.
  *
  * Não há transação para desfazer junto, então a falha da gravação não pode
  * virar a resposta: o 500 diria que o comando não saiu, e o clique de novo

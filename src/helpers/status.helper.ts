@@ -13,7 +13,7 @@ export function tomDoStatus(tipo: TipoDeStatus): 'sucesso' | 'info' | 'aviso' | 
   return tons[tipo];
 }
 
-// OS CARTÕES TOTAL, ATIVOS E DESATIVADOS (BT): Estoque e Colaboradores, as listas cujo
+// OS CARTÕES TOTAL, ATIVOS E DESATIVADOS (BT): Estoque, Colaboradores e Usuários, as listas cujo
 // status é o `isActive`.
 
 export type StatusAtivo = 'ativos' | 'desativados';

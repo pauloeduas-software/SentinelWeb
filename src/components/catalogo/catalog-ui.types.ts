@@ -155,7 +155,7 @@ export function tituloDoNovo({ singular, genero }: CatalogUiSpec): string {
 // Traduções dos enums do banco. Ficam aqui, num lugar só, porque a tabela e o
 // formulário precisam das MESMAS listas — separadas, divergiriam no primeiro
 // valor novo.
-// O tipo da categoria diz a que MÓDULO ela pertence: uma categoria de Ativo não
+// O tipo da categoria diz a que MÓDULO ela pertence: uma categoria de Computador não
 // agrupa licenças.
 export const TIPOS_CATEGORIA: readonly OpcaoFixa[] = [
   { value: 'ASSET', label: 'Computador',

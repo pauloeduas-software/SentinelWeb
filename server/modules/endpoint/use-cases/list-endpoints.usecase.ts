@@ -5,7 +5,7 @@ import { buildEndpointWhere, type FiltrosDeEndpoint } from '../helpers/endpoint-
 import { analisarMaquina, type DicaDoVinculo, type MaquinaDoParque } from '../../reconciliation/helpers/match-cascade.helper';
 import { lerParque, type Parque } from '../../reconciliation/use-cases/auto-link-endpoint.usecase';
 
-// Máquinas descobertas pelo agente. SEM telemetria: a lista de `/agentes` não a
+// As máquinas com o agente. SEM telemetria: a lista de `/agentes` não a
 // mostra, e quem quer a amostra de UMA máquina usa `getEndpoint` (o porquê está
 // lá). Sem ORDER BY o Postgres devolve em ordem arbitrária e as linhas trocavam
 // de lugar a cada atualização do painel.

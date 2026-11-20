@@ -3,7 +3,7 @@ import { validateEnv } from '../../server/infra/config/env';
 
 // O NODE_ENV é uma igualdade com 'production' (`isProduction`): um erro de
 // digitação desligaria em silêncio o cookie Secure, a recusa do segredo fraco e
-// a exigência do AGENT_TOKEN. O boot recusa valor fora da lista.
+// a exigência do AGENT_ENROLL_SECRET. O boot recusa valor fora da lista.
 
 const original = process.env.NODE_ENV;
 

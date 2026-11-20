@@ -7,7 +7,7 @@ import type { Seeder } from './seeder';
 // O `type` NÃO é enfeite: é ele que decide o que dá para fazer com o ativo, e
 // só `DEPLOYABLE` libera a entrega. O significado de cada um está no
 // `enum StatusLabelType` (prisma/schema.prisma) e nas ajudas de `TIPOS_STATUS`
-// (src/pages/configuracoes/specs/catalog-ui.types.ts). Quem quiser distinguir
+// (src/components/catalogo/catalog-ui.types.ts). Quem quiser distinguir
 // "Em conserto" de "Em trânsito" cadastra outros status do mesmo tipo.
 const STATUS_LABELS = [
   { name: 'Disponível', type: 'DEPLOYABLE' },

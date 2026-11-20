@@ -31,7 +31,7 @@ import { assertSemMaquina } from '../../reconciliation/use-cases/get-asset-machi
 interface RetireAssetData {
   /** Um motivo do cadastro de Configurações (BE). */
   retiredReasonId: string;
-  /** Ausente = agora. A saída pode ter acontecido antes de alguém registrar. */
+  /** Ausente = hoje. A saída pode ter acontecido antes de alguém registrar. */
   retiredAt?: Date | null;
   /** A justificativa. Vai para `retiredNotes`, que o aviso da ficha mostra (AB). */
   notes?: string | null;

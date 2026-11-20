@@ -51,7 +51,7 @@ export function quemEstaNoPosto(posto: Pick<Posto, 'ocupantes'>): string {
  *
  * Todo ativo é um computador (o que não é máquina é estoque), e um posto tem
  * no máximo um — é a invariante 19. O que varia é se o agente já foi vinculado
- * a ele: sem máquina, o computador está na mesa mas a ficha não tem o que
+ * a ele: sem máquina, o computador está no posto mas a ficha não tem o que
  * medir. A resposta é uma LISTA para a ficha conseguir mostrar o dado de antes
  * da regra, se ele existir.
  */

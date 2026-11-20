@@ -75,7 +75,6 @@ export function createCatalogController(spec: CatalogSpec) {
         delete paginacao.isActive;
       }
 
-      // Sem `trashable` — aqui não há lixeira (D8).
       // `?view=trashed` só existe na tabela com lixeira: nas outras, a chave é 422.
       const query = parseListQuery(paginacao, { trashable: spec.lixeira === true });
       // A LIXEIRA é `SUPERVISOR` (AV): a listagem do colaborador é do Técnico, e

@@ -7,7 +7,7 @@
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D22–D26, D72–D78, D80, D89, D135–D142, P da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X, Z, AB, AH e AP, que vieram depois da varredura
+> [`README.md`](./README.md#a-segunda-rodada-ap)) e R, S, T, U, W, X, Z, AB, AH, AP, AR, AU, AV, BD, CB, CR e CU, que vieram depois da varredura
 > Q e continuaram a letra.
 
 ---
@@ -305,6 +305,8 @@ concluída. Com ele, a pergunta *"já dá para cortar?"* tem resposta observáve
 
 > **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
+> **Corrige:** [D75](#d75--department-é-a-décima-spec-do-catálogo-e-a-troca-de-coluna-é-em-duas-migrações) (o `Department` em duas migrações).
+
 **Decidido:** `USER_PUBLIC_SELECT` continua **sem** departamento; nasce `USER_LIST_SELECT` com
 `department: { select: { id, name } }` para a listagem de pessoas. **Descartado:** `department:
 { select: … }` no select embutido; e deixar front, importador e `USER_SORTABLE` para o commit final.
@@ -559,6 +561,8 @@ demo de novo ganha uma segunda conta `ADMIN` —, e é aceita por ser banco de d
 > do usuário excluído, que ficava no banco com `deletedAt`, passou a ser apagada; e o
 > administrador não rebaixa, não desativa e não exclui a si mesmo.
 
+> **Supera em parte:** [D39](./licencas.md#d39--assento-de-licença-não-vai-para-um-posto) (o alvo da licença com os nomes de hoje: colaborador ou computador).
+
 **Decidido:** a tabela `users` passa a guardar só quem OPERA o sistema — Técnico e
 Administrador. Quem RECEBE equipamento é **colaborador**, uma tabela própria (`Person`, `people`)
 que é a sexta aba do catálogo em Configurações: nome, e-mail opcional, desativar, excluir. As
@@ -615,6 +619,8 @@ telas. `GET /api/users/options`, `/:id` e `/:id/history` saíram; o seletor de p
 > **Superada em parte por [Z](#z--sobra-um-cargo-só-administrador-e-a-separação-de-cargos-fica-para-decidir):** com um cargo só, não há para onde
 > rebaixar, e a regra de não rebaixar a si mesmo saiu. Desativar e excluir a si mesmo continuam
 > recusados.
+
+> **Completa:** [U](#u--quem-recebe-equipamento-sai-de-user-colaborador-vira-catálogo-e-sobram-dois-cargos) (a lixeira do usuário: a linha excluída passa a ser apagada).
 
 **Decidido:** duas regras da tela Usuários.
 
@@ -875,6 +881,8 @@ para a aplicação que só faça `INSERT` na auditoria, o que muda a implantaç�
 com as perguntas prontas no horário de Brasília.
 
 ## AH — O menu por assunto: o colaborador ganha página própria, e Ativos vira Computadores
+
+> **Superada em parte por [CH](./plataforma.md#ch--um-nome-para-cada-coisa):** o item se chama computador, nunca ativo, e a seção Ativos do menu sai.
 
 **Decidido** (em 2026-10-27, na conferência das telas padronizadas — o usuário perguntou se o
 colaborador não devia sair de Configurações e ter uma página só para ele; dada a recomendação,
@@ -1155,6 +1163,8 @@ saindo uma vez só.
 ## CR — Cada máquina tem o seu token, e o segredo único só cadastra
 
 > **Superada em parte por [DD](./reconciliacao.md#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente):** o `bun run agente:revogar` sai; revogar é excluir a máquina em Agentes, que também fecha a conexão aberta.
+
+> **Superada em parte por [CU](#cu--a-conexão-com-o-hwid-de-outra-máquina-fecha-com-1008):** a mensagem com o HWID de outra máquina fecha a conexão com 1008, em vez de ser só descartada.
 
 > **Supera:** [D149](./escopo.md#d149--o-apitoken-sai-e-o-agente-volta-ao-agent_token), na parte do agente.
 

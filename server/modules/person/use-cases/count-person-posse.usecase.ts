@@ -111,7 +111,7 @@ function emSequencia(partes: readonly string[]): string {
   return `${partes.slice(0, -1).join(', ')} e ${partes[partes.length - 1]}`;
 }
 
-/** A recusa: a frase, e as licenças que ela cita, para a tela pôr link. */
+/** A recusa: a frase, e o que ela cita, para a tela pôr link. */
 export interface RecusaDaPessoa {
   mensagem: string;
   refs: ReferenciaDoErro[];
@@ -125,7 +125,7 @@ export interface RecusaDaPessoa {
  * qual das duas camadas manda o operador procurar no lugar errado — e a camada
  * do posto é justamente a que ninguém lembra.
  *
- * AS QUATRO PONTAS VÊM PELO NOME — "responde por 1 ativo (ATV-00012), 3 licenças
+ * AS QUATRO PONTAS VÊM PELO NOME — "responde por 1 computador (ATV-00012), 3 licenças
  * (AutoCAD, Office e VPN), 3 unidades de estoque (Mouse USB ×2 e Teclado) e 1
  * posto (Mesa 1)" — e como `refs`: o Devolver mora na
  * ficha do computador, na da licença e na do item, e o Encerrar na

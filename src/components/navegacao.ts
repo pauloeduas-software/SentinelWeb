@@ -21,7 +21,7 @@ import type { Cargo } from '../types/user.types';
 // apertado, ele desaparecia.
 //
 // Na vertical o número de itens para de ser um problema de largura: eles cabem
-// numa coluna de 220px, e a lista cresce para baixo, onde há espaço.
+// numa coluna de 256px, e a lista cresce para baixo, onde há espaço.
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface ItemDeMenu {
@@ -69,13 +69,13 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     itens: [
       // COMPUTADORES É O PRIMEIRO ITEM, e antes dele havia Telemetria em `/`. A
       // tela da frota saiu: ela media as máquinas sem saber de quem são, e a
-      // medida foi para a ficha do ativo e a do posto, onde a máquina tem nome.
+      // medida foi para a ficha do computador e a do posto, onde a máquina tem nome.
       // A raiz passou a redirecionar para cá (src/App.tsx), então nenhum item
       // aponta mais para `/`. A seção também se chama Computadores: ativo é
       // computador (decisão I), e a tela diz um nome só (CH).
       { to: '/computadores', label: 'Computadores', icon: Monitor, cargo: 'TECNICO' },
       // Logo depois: é a mesma operação vista do outro lado — o computador
-      // está na mesa, e a mesa é de quem a ocupa (docs/referencia/modelo-de-posse.md).
+      // está no posto, e o posto é de quem o ocupa (docs/referencia/modelo-de-posse.md).
       { to: '/postos', label: 'Postos', icon: MapPin, cargo: 'TECNICO' },
     ],
   },
@@ -84,7 +84,7 @@ export const GRUPOS_DE_MENU: readonly GrupoDeMenu[] = [
     // outros — a mesma lógica nos dois (AE).
     titulo: 'Recursos',
     itens: [
-      // O que sai do almoxarifado costuma ir para a mesa (docs/decisoes/estoque.md).
+      // O que sai do almoxarifado costuma ir para o posto (docs/decisoes/estoque.md).
       { to: '/estoque', label: 'Estoque', icon: Package, cargo: 'TECNICO' },
       // Licença também é posse: cada entrega é uma linha, a um colaborador ou a
       // um computador (AA).
@@ -129,9 +129,9 @@ const ITENS_DE_MENU: readonly ItemDeMenu[] = GRUPOS_DE_MENU.flatMap((grupo) => g
 /**
  * Este item está ativo para o caminho atual?
  *
- * PREFIXO, e não igualdade: a tela de detalhe do ativo mora em `/computadores/:id` e
+ * PREFIXO, e não igualdade: a ficha do computador mora em `/computadores/:id` e
  * precisa manter *Computadores* aceso — com igualdade, o menu apagava inteiro assim
- * que se abria um ativo.
+ * que se abria um computador.
  *
  * O prefixo é comparado com a BARRA no fim (`${to}/`), e é isso que torna a raiz
  * um caso comum em vez de especial: havia aqui um ramo `to === '/'` pela

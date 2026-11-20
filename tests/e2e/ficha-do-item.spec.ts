@@ -73,7 +73,10 @@ test('a busca fica no endereço: trocar de aba não a perde, limpar a tira, e a 
   await page.goto(`/estoque?busca=${encodeURIComponent(nome)}`);
   await page.getByRole('row', { name: new RegExp(nome) }).click();
   // A busca da lista também é `searchbox` na `main`: sem esperar a ficha, o `fill` cai nela.
+  // O endereço muda antes de a ficha tomar o lugar da lista, então a espera é pela
+  // aba Histórico, que só a ficha tem.
   await expect(page).toHaveURL(/\/estoque\/[^/?]+$/);
+  await expect(page.getByRole('tab', { name: /Histórico/ })).toBeVisible();
 
   const busca = page.getByRole('main').getByRole('searchbox');
   await busca.fill('Laura');

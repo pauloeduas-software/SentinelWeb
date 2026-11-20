@@ -61,7 +61,7 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 |  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, a etiqueta do computador, se está vago; criar, editar e excluir posto | TECNICO |
 |  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, registrar a saída), **Computador**, **Máquina** (link para a ficha da máquina, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
 | **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
-|  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução) e **Histórico** | TECNICO |
+|  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução; **Computadores** no componente, e o consumível não tem) e **Histórico** | TECNICO |
 |  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |
 |  | `/licencas/:id` | Ficha da licença — a conta e o cadastro no card, abas **Responsáveis** (com a devolução), **Chaves** e **Histórico** | TECNICO |
 | **Convergência** | `/agentes` | As máquinas com o SentinelAgente — a série única liga a máquina ao computador sozinha; a vista Com computador desvincula, a Sem computador vincula à mão, e a Sumidos mostra quem parou de dar sinal. A busca acha a máquina pelo IP, e o `⋯` atualiza a máquina agora. Excluir a máquina é do Supervisor | TECNICO |
@@ -71,9 +71,9 @@ Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--
 | **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa | SUPERVISOR |
 | **Gestão** | `/usuarios` | Quem opera o sistema — Técnico, Supervisor ou Administrador (AV). O cadastro pede nome, e-mail e cargo, e a conta nasce com uma senha temporária (o login é o e-mail) | ADMIN |
 
-A convergência RMM × ITAM — vínculo entre a máquina que o agente descobre e o ativo cadastrado,
-telemetria em tempo real e comando remoto — vive dentro das fichas do ativo e do posto, não numa
-tela própria. O critério de cada tela e o que já existiu e saiu estão em
+A convergência RMM × ITAM — vínculo entre a máquina que o agente apresenta e o ativo cadastrado,
+telemetria e comando remoto — mora em Agentes: o vínculo na lista e na ficha da máquina, e a
+telemetria e o comando também na aba Máquina do computador e do posto. O critério de cada tela e o que já existiu e saiu estão em
 [`docs/decisoes/escopo.md`](./docs/decisoes/escopo.md).
 
 ## 📋 Requisitos
@@ -91,8 +91,8 @@ Todas configuráveis pelo `.env` (o único que o servidor lê fora dos testes):
 | Back     | 3001  | `PORT`          |
 | Postgres | 3002  | `POSTGRES_PORT` |
 
-Ao trocar `POSTGRES_PORT`, ajuste também a porta dentro de `DATABASE_URL` — o Prisma
-não expande `${VAR}` no `.env`.
+Ao trocar `POSTGRES_PORT`, ajuste também a porta dentro de `DATABASE_URL` — o servidor
+lê o `.env` com `process.loadEnvFile()`, que não expande `${VAR}`.
 
 O frontend nunca aponta para uma porta fixa: as chamadas saem em `/api` relativo
 (`src/api/apiClient.ts`) e o Vite faz o proxy para o backend em dev. Só quando painel e
@@ -115,7 +115,7 @@ cp .env.example .env
 docker compose up -d
 bun run db:migrate
 bun run db:generate
-bun run db:seed      # configuração, categorias e status — sem conta nenhuma
+bun run db:seed      # configuração, categorias, status e motivos de baixa — sem conta nenhuma
 
 # 4. Rodar modo dev (Vite + API, com reload nos dois)
 bun run dev
@@ -134,8 +134,8 @@ bun run dev
 | `e2e:servidor` | O servidor que o `test:e2e` sobe e derruba, com o ambiente que o `playwright.config.ts` monta do `.env.test`: prepara o banco, faz o build e serve o `dist` na porta 4173 |
 | `check` | `lint`, `typecheck`, `test` e `test:e2e`, nessa ordem. É o que passa antes de dar uma mudança por pronta, e o que a CI (`.github/workflows/ci.yml`) roda a cada push na `main` |
 | `db:migrate` / `db:generate` / `db:studio` | Prisma |
-| `db:seed` | O seed principal: categorias, status e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
-| `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
+| `db:seed` | O seed principal: categorias, status, motivos de baixa e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
+| `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, postos, computadores, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
 | `acesso:administrador` | Cria um administrador: `--nome "Nome Completo" --email "e-mail" --senha "senha"`. É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
 
 ### Migrations

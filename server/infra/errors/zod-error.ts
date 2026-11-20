@@ -8,7 +8,7 @@ z.config(z.locales.ptBR());
 // Traduz um ZodError na frase de erro do projeto.
 //
 // Fica em `infra/errors` junto com o resto da tradução de erro: `zod` é
-// biblioteca, não `domain` — o lint não reclama e o error-handler continua sendo
+// biblioteca, não `modules` — o lint não reclama e o error-handler continua sendo
 // o ÚNICO lugar do sistema que monta resposta de erro.
 
 // Quantos campos entram na mensagem curta antes de virar "e mais N".

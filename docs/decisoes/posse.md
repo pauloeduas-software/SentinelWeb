@@ -7,7 +7,7 @@
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D14–D17, D27–D32, D82, D87–D88, B/K da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)), V, Y, AL e AM.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), V, Y, AL, AM, AW, AX, BI, BM, BN, BO, BP, BQ, BX, CG, CQ e DL.
 
 ---
 
@@ -640,6 +640,8 @@ localização, o segundo — sem lixeira, porque ninguém precisa dela de volta.
 > **Superada em parte por [AO](./catalogo-e-ativo.md#ao--categoria-status-fabricante-modelo-e-localização-não-se-desativam):**
 > a localização também perde o Desativar, e a invariante 21 sai.
 
+> **Supera em parte:** [D39](./licencas.md#d39--assento-de-licença-não-vai-para-um-posto) (o posto como `Workstation`, que continua sem receber licença).
+
 **Decidido:** o posto de trabalho vira cadastro próprio — `Workstation`, com nome, a localização
 onde ele fica (`locationId`, obrigatória), notas e `isActive` — e a `Location` volta a ser só lugar.
 
@@ -1006,6 +1008,10 @@ com "Entrou no posto: Mesa 7" na própria ficha.
 ---
 
 ## BQ — Entregar e Devolver são dois botões, e a aba Responsáveis é uma só
+
+> **Superada em parte por [CG](#cg--postos-no-molde-das-outras-telas):** a linha de quem está no posto não leva o e-mail.
+>
+> **Superada em parte por [CH](./plataforma.md#ch--um-nome-para-cada-coisa):** o Encerrar da linha do posto vira Registrar saída; Encerrar é só da licença.
 
 **Decidido** (2026-11-07, comparando as abas Responsáveis do computador e do posto com as de Estoque e Licenças):
 

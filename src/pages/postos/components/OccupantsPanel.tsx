@@ -16,7 +16,7 @@ import type { WorkstationOccupant } from '../../../types/posse.types';
 // tem.
 //
 // É o painel onde a Mesa 1 vira "Laura de manhã, Ana à tarde": os dois nomes
-// que a aba Responsáveis do ativo mostra, sem que nenhum ativo
+// que a aba Responsáveis do computador mostra, sem que nenhum ativo
 // tenha sido tocado. Entrar num posto é passar a responder por tudo que foi
 // entregue a ele; sair é deixar de responder.
 //
@@ -37,7 +37,7 @@ interface OccupantsPanelProps {
   /**
    * Corrige o TURNO de uma ocupação aberta, na própria linha. É texto livre
    * ("Manhã", "08h–14h"), então corrigir serve tanto ao nome quanto ao horário
-   * escrito. Encerrar e reabrir faria o histórico dizer que a pessoa saiu e
+   * escrito. Registrar a saída e reabrir faria o histórico dizer que a pessoa saiu e
    * voltou, e perderia a data de entrada.
    */
   onCorrigirTurno: (ocupante: WorkstationOccupant, turno: string) => Promise<void>;

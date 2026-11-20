@@ -19,8 +19,8 @@ como quantas entraram, mudaram e saíram, nunca o texto.
 
 - **A quantidade vai de 1 a 100.000**: zero não é contrato, e a licença que acabou se encerra. O
   piso tem o CHECK `licenses_seats_positivo`; o teto é só da aplicação.
-- **A compra e o encerramento não são futuros** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): 422 `data de compra não pode ser uma
-  data futura` / `data de encerramento não pode ser uma data futura`. O vencimento pode, e é o
+- **A compra e o encerramento não são futuros** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): 422 `Data de compra não pode ser uma
+  data futura.` / `Data de encerramento não pode ser uma data futura.` O vencimento pode, e é o
   caso normal.
 - **O vencimento e o encerramento não antecedem a data da compra.** Cada um só é comparado
   quando os dois lados estão preenchidos, e o encerramento não é comparado com o vencimento — dá
@@ -167,8 +167,8 @@ lixeira é 404 mesmo com a licença vencida. As duas últimas linhas são da dev
 
 | Tentativa | Resposta |
 |---|---|
-| entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` / `data da devolução não pode ser uma data futura` |
-| dois alvos, nenhum, ou posto | 422 — com dois: `Uma entrega tem um alvo só: informe o colaborador ou o ativo, nunca os dois.`; o posto nem é campo |
+| entrega ou devolução num dia futuro | 422 `Data da entrega não pode ser uma data futura.` / `Data da devolução não pode ser uma data futura.` |
+| dois alvos, nenhum, ou posto | 422 — com dois: `Uma entrega tem um alvo só: informe o colaborador ou o computador, nunca os dois.`; o posto nem é campo |
 | ativo ou colaborador que não existe, ou na lixeira | 404 `Computador não encontrado.` / `Colaborador não encontrado.` |
 | ativo baixado / colaborador desativado | 409 `O computador ATV-00042 teve baixa e não pode receber licença.` / `Laura Souza está desativado(a) e não pode receber licença.` |
 | licença encerrada ou vencida | 409 `A licença "Office 2021" está encerrada e não recebe entrega. Se o contrato voltou, reabra-a antes.` / `A licença "Office 2021" venceu há 3 dias e não recebe entrega: renove o contrato e atualize a data de vencimento antes.` — a vencendo entrega normalmente |

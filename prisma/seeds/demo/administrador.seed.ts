@@ -8,7 +8,7 @@ import { logger, type Seeder } from '../seeder';
 // uma senha publicada no código seria a porta de qualquer banco de cliente.
 // Aqui é o login de quem abre o ambiente de desenvolvimento pela primeira vez.
 //
-// A senha tem menos de 12 caracteres, o mínimo do CADASTRO pela tela
+// A senha tem menos de 12 caracteres, o mínimo da SENHA NOVA
 // (`auth.schema.ts`); o login não confere tamanho, e por isso ela entra.
 const ADMINISTRADOR = { name: 'Administrador', email: 'admin@sentinel.com', role: 'ADMIN' } as const;
 const SENHA = 'admin';

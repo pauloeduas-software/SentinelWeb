@@ -31,8 +31,9 @@ import { usePode } from '../stores/auth.store';
 // sair da tela de telemetria e procurar o ativo em outra.
 //
 // Então o RMM entra pelo ITAM: a telemetria aparece onde a máquina tem nome, e
-// esses lugares são dois — a ficha do ATIVO, que responde "este equipamento está
-// bem?", e a ficha do POSTO, que responde "o computador desta mesa está bem?".
+// esses lugares são três — a ficha do COMPUTADOR, que responde "este equipamento está
+// bem?", a ficha do POSTO, que responde "o computador deste posto está bem?", e a
+// ficha da MÁQUINA, em Agentes (DF).
 // É a ponte da convergência vista de perto.
 //
 // A LINHA DA MÁQUINA E DOIS BLOCOS EMBAIXO DELA: o que a máquina é e como está, e
@@ -47,14 +48,13 @@ import { usePode } from '../stores/auth.store';
 // ─────────────────────────────────────────────────────────────────────────────
 // E ELE FALA HTTP, que é EXCEÇÃO DECLARADA à regra de componente.
 //
-// A regra é `docs/referencia/arquitetura.md`: componente recebe `onComando` e o
-// hook da página faz a chamada. Aqui o hook é chamado DAQUI, e o motivo é o
-// mesmo do `ReferenceSelect`, a outra exceção: este painel é um widget
+// A regra é `docs/referencia/arquitetura.md`: componente recebe a escrita por prop e o
+// hook da página faz a chamada. Aqui o hook é chamado DAQUI: este painel é um widget
 // autocontido — ele tem ciclo de vida próprio (um `refetchInterval` que começa
 // ao montar e para ao desmontar) e é usado por três telas sem relação entre si.
-// Passá-lo por prop obrigaria `useFichaDoComputador` e `usePostos` a escrever a MESMA
-// ligação de seis props, cada um, e a conhecer telemetria sem ter nada a ver com
-// ela. As duas exceções estão nomeadas na regra, lá; a terceira que aparecer sem
+// Passá-lo por prop obrigaria `useFichaDoComputador`, `useFichaDoPosto` e `useFichaDaMaquina` a
+// escrever a MESMA ligação de seis props, cada um, e a conhecer telemetria sem ter nada a
+// ver com ela. A exceção está nomeada na regra, lá; a próxima que aparecer sem
 // motivo escrito é a regra virando sugestão.
 // ─────────────────────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
@@ -198,7 +198,7 @@ export default function TelemetriaDaMaquina({ endpointId, naFichaDaMaquina = fal
 
   if (carregando) return <p className="text-sm text-text-tertiary">Carregando…</p>;
 
-  // BUSCA ENGOLE ERRO (docs/referencia/arquitetura.md): esta consulta revalida
+  // O ERRO APARECE, NUNCA VIRA VAZIO (docs/referencia/arquitetura.md): esta consulta revalida
   // sozinha, e um 500 passageiro, um reinício do servidor ou um
   // tempo esgotado não podem limpar a tela. Trocar o painel por uma linha
   // vermelha tirava as barras, os discos E OS TRÊS BOTÕES DE COMANDO — num
@@ -248,8 +248,9 @@ export default function TelemetriaDaMaquina({ endpointId, naFichaDaMaquina = fal
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs text-text-tertiary">
               {/* A HORA DA AMOSTRA, só quando ela não é o último contato da linha de
-                  cima: a máquina conectada pinga a cada minuto, e a leitura vem de hora
-                  em hora. Sem ela, 66% de CPU de 50 minutos atrás se lê como 66% agora.
+                  cima: a máquina conectada pinga a cada 30 a 60 s, e a leitura vem de hora
+                  em hora. Sem ela, os 66% de CPU, média da hora que terminou 50 minutos
+                  atrás, se leem como 66% agora.
                   Quando a leitura foi a última coisa que a máquina mandou, as duas
                   horas são a mesma, e a frase repetiria a linha. */}
               {!amostra ? 'Nenhuma leitura ainda' : leituraAtrasada && `Leitura de ${hora(amostra.timestamp)}`}
@@ -281,7 +282,9 @@ export default function TelemetriaDaMaquina({ endpointId, naFichaDaMaquina = fal
           ) : (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Medidor icone={Cpu} rotulo="CPU" valor={cpuUsage} online={online} />
+                {/* A CPU é a média desde a leitura anterior, e não o uso deste instante:
+                    de hora em hora é a da hora, e a primeira depois do boot é de 10 s. */}
+                <Medidor icone={Cpu} rotulo="CPU" valor={cpuUsage} detalhe="Média desde a leitura anterior" online={online} />
                 <Medidor
                   icone={MemoryStick}
                   rotulo="Memória"
@@ -332,7 +335,8 @@ export default function TelemetriaDaMaquina({ endpointId, naFichaDaMaquina = fal
                 <Button
                   variant="outline"
                   // O BOTÃO NÃO É DESABILITADO QUANDO A MÁQUINA ESTÁ DESCONECTADA, e
-                  // isso é decisão: o `status` da tela atrasa até uns três minutos —
+                  // isso é decisão: a máquina que some sem fechar a conexão (a queda de
+                  // energia, a suspensa) segue Conectado na tela por até uns três minutos —
                   // os dois de tolerância (`mark-stale-endpoints-offline`, CS) mais a
                   // rodada de um minuto do job de zumbis —, então um botão cinza
                   // mentiria nos dois sentidos. Quem decide é o servidor, na hora, e

@@ -226,10 +226,10 @@ describe('o cargo abaixo do mínimo leva 403, rota por rota (AV)', () => {
 });
 
 describe('ninguém tira a si mesmo do jogo (W)', () => {
-  // O cliente padrão da suíte É o administrador do `.env`, e o seed garante que
-  // ele é o único administrador num banco de teste limpo. Cada caso põe um
-  // segundo administrador: com dois, a rede do último deixaria passar, e quem
-  // recusa é a regra da própria conta.
+  // O cliente padrão da suíte É o administrador do `.env.test`, e o harness
+  // garante que ele é o único administrador num banco de teste limpo. Cada caso
+  // põe um segundo administrador: com dois, a rede do último deixaria passar, e
+  // quem recusa é a regra da própria conta.
   let outro: Awaited<ReturnType<ApiDeTeste['comoUsuario']>>;
 
   beforeAll(async () => { outro = await api.comoUsuario('ADMIN'); });

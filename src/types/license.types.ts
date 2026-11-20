@@ -142,7 +142,7 @@ export interface EntregaComChave extends EntregaDeLicenca {
 }
 
 /**
- * Uma entrega aberta vista DO ALVO — a aba Licenças do ativo e a ficha do
+ * Uma entrega aberta vista DO ALVO — a aba Licenças do computador e a ficha do
  * colaborador —, com o status da licença ao lado.
  */
 export interface EntregaDoAlvo extends EntregaDeLicenca {

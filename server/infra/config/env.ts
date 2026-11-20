@@ -20,7 +20,7 @@ export const isProduction = process.env.NODE_ENV === 'production';
  *
  * O PARÂMETRO É OBRIGATÓRIO, e isso não é estilo. Com `nodeEnv = process.env.NODE_ENV`
  * como padrão, `tetoDeRequisicaoLigado(undefined)` cai no padrão em vez de receber
- * `undefined` — e o caso "ambiente sem NODE_ENV", que é o do `npm run dev`, ficava
+ * `undefined` — e o caso "ambiente sem NODE_ENV", que é o do `bun run dev`, ficava
  * INALCANÇÁVEL pelo teste: dentro do vitest o padrão vale `'test'`, então a
  * asserção do desenvolvimento afirmava o teste. Quem lê o ambiente é quem chama.
  */
@@ -65,7 +65,7 @@ export function validateEnv(): string[] {
   // `isProduction` é uma igualdade com 'production': um erro de digitação
   // (`producao`, `Production`) desligaria em silêncio o cookie Secure, a recusa do
   // segredo fraco e a exigência do AGENT_ENROLL_SECRET. Valor fora da lista para o boot.
-  // Ausente vale: é o `npm run dev`.
+  // Ausente vale: é o `bun run dev`.
   const nodeEnv = process.env.NODE_ENV?.trim();
   if (nodeEnv && !NODE_ENVS.includes(nodeEnv)) {
     throw new Error(`NODE_ENV inválido: "${nodeEnv}". Use ${NODE_ENVS.join(', ')} ou deixe vazio.`);
@@ -123,7 +123,7 @@ export function getJwtSecret(): string {
   return (process.env.JWT_SECRET ?? '').replace(/^"|"$/g, '').trim();
 }
 
-// O segredo de instalação do Agente Sentinel: vale só no cadastro, que o troca
+// O segredo de instalação do SentinelAgente: vale só no cadastro, que o troca
 // pelo token da máquina (CR). Vazio = cadastro aberto, aceito apenas fora de
 // produção (ver validateEnv).
 export function getAgentEnrollSecret(): string {

@@ -85,7 +85,7 @@ function analisarSerie(maquina: MaquinaDoParque, ativos: AtivoDoParque[], repeti
   const [ativo] = casados;
   if (ativo.retiredAt) return { ...nada, aviso: `A série é a de ${ativo.assetTag}, que teve baixa.` };
   if (ativo.endpoint && ativo.endpoint.id !== maquina.id) {
-    // A troca de placa-mãe com a série regravada cai aqui: a máquina antiga
+    // A troca de placa-mãe com a série regravada e o sistema reinstalado cai aqui: a máquina antiga
     // continua no computador até alguém desvinculá-la.
     return { ...nada, aviso: `A série é a de ${ativo.assetTag}, que já tem a máquina ${ativo.endpoint.hostname}.` };
   }

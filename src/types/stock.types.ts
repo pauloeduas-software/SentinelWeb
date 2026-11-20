@@ -2,7 +2,7 @@ import type { Referencia } from './asset.types';
 
 // O CONTRATO DO ESTOQUE com a API — o item por quantidade, a entrega e o
 // histórico. A mesma forma da licença (AE): o total é campo da edição, a
-// entrega e a devolução têm dia, o item que acabou se desativa.
+// entrega e a devolução têm dia, o item que acabou continua ativo, com 0 (AJ).
 //
 // Ativo é computador; o que não é máquina (monitor, teclado, mouse, cabo) é
 // `StockItem`: N unidades intercambiáveis, sem patrimônio individual. Espelha

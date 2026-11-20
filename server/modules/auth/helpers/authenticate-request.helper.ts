@@ -9,7 +9,7 @@ import '../../access/access.types';
 //
 // Fica no DOMÍNIO porque é aqui que "sessão" quer dizer alguma coisa: um JWT
 // assinado por nós, num cookie httpOnly, cujo `sub` ainda corresponde a um
-// usuário vivo e ativo. O core sabe só a ordem (allowlist primeiro, sessão
+// usuário vivo e ativo. A infra sabe só a ordem (allowlist primeiro, sessão
 // depois) e não pode importar nada disto (eslint.config.js).
 
 const SEM_SESSAO = 'Sessão ausente ou expirada. Faça login.';
@@ -51,9 +51,10 @@ export async function autenticarRequisicao(request: FastifyRequest): Promise<voi
   // encontra). Trocar a senha, não: a pessoa continua sendo um usuário válido e
   // ativo, então quem tivesse roubado o cookie seguia dentro por até o fim do TTL
   // depois de a vítima fazer exatamente o que se faz ao desconfiar.
-  // Comparar o número assinado com o do banco fecha isso: trocar a senha na
-  // edição do usuário (`update-user.usecase.ts`) incrementa a coluna, e todo
-  // token emitido antes morre na requisição seguinte.
+  // Comparar o número assinado com o do banco fecha isso: trocar a senha
+  // (`change-own-password.usecase.ts`) ou gerar a temporária
+  // (`reset-user-password.usecase.ts`) incrementa a coluna, e todo token
+  // emitido antes morre na requisição seguinte.
   //
   // `tv` é obrigatório: token sem o campo é anterior a este mecanismo e já
   // venceu há muito (a sessão durava 8h), então não há sessão legítima sem ele.

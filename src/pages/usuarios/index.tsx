@@ -80,7 +80,7 @@ export default function UsersPage() {
                     {/* Sem esta marca, quem foi desativado pelo botão some de vista:
                         a linha continua igual às outras. "Desativado", e não
                         "inativo": é a mesma palavra do botão que a causou e a
-                        mesma de Configurações e de Colaboradores. */}
+                        mesma de Colaboradores. */}
                     <PontoDeStatus tom={user.isActive ? 'sucesso' : 'aviso'}>
                       {user.isActive ? 'Ativo' : 'Desativado'}
                     </PontoDeStatus>

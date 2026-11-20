@@ -55,7 +55,7 @@ export const personSpec: CatalogSpec = {
     return posse.ativos.length + posse.postos.length + posse.licencas.length + posse.itens.length;
   },
 
-  // A recusa diz O QUÊ — "responde por 1 ativo (ATV-00012) e ocupa 1 posto (Mesa 1)" —, e não "em
+  // A recusa diz O QUÊ — "responde por 1 computador (ATV-00012) e 1 posto (Mesa 1)" —, e não "em
   // uso por 2 registros": cada ponta se resolve numa tela diferente. A trava
   // vem antes da contagem, pelo mesmo motivo da desativação: sem ela, uma
   // entrega simultânea nasceria depois da contagem e a pessoa iria para a

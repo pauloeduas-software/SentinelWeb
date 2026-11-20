@@ -50,11 +50,11 @@ que corrigem algo anterior:
 | **AY** (subtítulo de uma linha), **AT** (o estado da lista na URL, só a aba) | **AZ** | a página fica sem subtítulo, e a aba de Configurações mora no endereço |
 | **AT** (o título fora do cabeçalho; o estado da lista na URL, só em Postos), **AY** (o título; detalhe em janela, no posto) | **BA** | o título da página volta ao cabeçalho, e o posto tem ficha em página, com o estado da lista na URL |
 | **BA** (a ação na página; os filtros fora da URL), **AZ** (busca, filtro e página fora da URL) | **BB** | o cabeçalho só tem o título e o voltar, e toda lista guarda os filtros na URL |
-| **P** (`USUARIO` não entra), **R** (em parte) | **U** | quem recebe equipamento sai de `User` e vira colaborador (catálogo); sobram dois cargos, e todo usuário tem senha |
+| **P** (`USUARIO` não entra), **R** (em parte), **D39** (em parte: o alvo com os nomes de hoje) | **U** | quem recebe equipamento sai de `User` e vira colaborador (catálogo); sobram dois cargos, e todo usuário tem senha |
 | **D8** (catálogo sem lixeira, em parte), **U** (em parte) | **V** | só o presente segura a exclusão: a localização sai de verdade e o histórico guarda o nome por escrito; o colaborador vai para a lixeira, com Restaurar |
-| a lixeira do usuário (`deletedAt`, `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
+| **U** (em parte: a lixeira do usuário, `deletedAt` e `users_email_unique_undeleted`) | **W** | excluir usuário apaga a linha; ninguém rebaixa, desativa ou exclui a si mesmo |
 | **D23**, **D24**, **D25**, **W** (em parte) | **X** | o histórico não guarda quem fez: as cinco colunas de autor e o parâmetro `actorId` saem, e usuário não grava histórico |
-| **D15**, **B** (a porta da marca), **V** (a metade da localização) | **Y** | o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante |
+| **D15**, **B** (a porta da marca), **V** (a metade da localização), **D39** (em parte: o posto como `Workstation`) | **Y** | o posto sai de `Location` e vira `Workstation`: a localização só guarda, com a regra do status; o posto recebe entrega, estoque e ocupante |
 | **U** (os dois cargos), **W** (o rebaixar) | **Z** | sobra um cargo só, `ADMIN`, com toda a validação dele; a separação de cargos é decisão a tomar |
 | **Z** | **AV** | três cargos, `TECNICO < SUPERVISOR < ADMIN`: o Técnico opera, o Supervisor decide e o Administrador cuida das contas |
 | **AU** (as 12 horas da sessão) | **BD** | a sessão vale 48 horas, ainda fixa e contada da entrada |
@@ -81,7 +81,7 @@ que corrigem algo anterior:
 | **AH** (em parte: ativo como nome do item e a seção Ativos do menu), **BQ** (em parte: o Encerrar da linha do posto) | **CH** | um nome para cada coisa: computador, nunca ativo; quem sai do posto tem Registrar saída, e Encerrar é só da licença |
 | **BV** (em parte: o nome do aviso da ficha) | **CK** | Computadores no molde das outras telas: o baixado sem Entregar, Reverter a baixa, o aviso Baixado e os painéis com a regra na ajuda |
 
-**O de-escopo (D143–D156) supera por subtração**, e é o maior grupo de supersessões do projeto:
+**O de-escopo (D143–D164) supera por subtração**, e é o maior grupo de supersessões do projeto:
 a decisão antiga não estava errada, o que ela governava deixou de existir. Está inteiro em
 [`escopo.md`](./escopo.md), e o critério é o D143 — sobrevive o que serve ao núcleo ITAM ou à
 ponte ITAM×RMM.
@@ -127,15 +127,15 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 |---|---|---|
 | **D47**, **D48**, **D49** (inferência pela conta do sistema operacional) | **A** | a fila deixa de inferir pessoa; sai a invariante 14, e o D50 fica |
 | **D115** (a rota da aba de telemetria) | **D** | a telemetria e o comando vão para a ficha do ativo e a do posto |
-| **D42**, **D91** (a cifra), **D102** (licença ↔ pacote), **D81**, **D145** (em parte: a cifra que sobrava) | **G** | licença vira cadastro simples, sem conformidade de software nem chave cifrada |
+| **D42**, **D91** (a cifra), **D102** (licença ↔ pacote), **D81**, **D145** (em parte: a cifra que sobrava), **D39** (em parte: o alvo sem o pacote) | **G** | licença vira cadastro simples, sem conformidade de software nem chave cifrada |
 | **D103**, **D104** (fusão de máquinas) | **H** | o `hwid` é estável entre reinstalações; não há o que fundir |
 | **D36**, **D37**, **D38**, **D153**, **D160** (estoque) | **J** | `StockItem` + `StockMovement`, entrega por unidade, alvo em pessoa ou posto |
 | **D14** (o `ASSET` como alvo), **D87** | **K** | a posse tem dois alvos: pessoa e posto |
 | **D21**, **D31**, **D32**, **D82** (massa e desligamento), **D93** (em parte: o `offboard`), **D57**, **D86** (e-mail), **D66**, **D129**, **D130** (a view do responsável), **D73**, **D74**, **D75**, **D135**, **D156** (`Department`), **D154**, **D161** (relatórios), **D69**, **D138**, **D163** (export e relatório) | **O** | o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada |
 | **D17** (`assignedToId`), **D26** (`createdById`/`updatedById`) | **Q** | a varredura do código morto: coluna, rota e parâmetro sem leitor saem |
 | a credencial à parte (`username` + `set-password` — decisão da execução, sem número) | **R** | a senha nasce no cadastro do usuário e o login é o e-mail |
-| **D40**, **D41**, **D43**, **D90**, **D92**, **D44** (em parte), a lixeira da licença | **AA** | a licença vira quantidade e entregas: sem vaga numerada, sem lixeira, sem reatribuível nem queima, com Encerradas e o "hoje" de Brasília |
-| **X**, **D18** (em parte), **AA** (a licença sem trilha) | **AB** | a auditoria de quem fez volta, só no banco: conta, sistema ou login sem sessão, por escrito, numa linha que não se reescreve; os históricos das telas ficam só movimentação |
+| **D40**, **D41**, **D43**, **D90**, **D92**, **D44** (em parte), a lixeira da licença; **D93** (em parte: o 409 com o nome de cada licença), **G** (em parte: a chave de produto volta, em texto), **Q** (em parte: o corpo de erro ganha `refs`) | **AA** | a licença vira quantidade e entregas: sem vaga numerada, sem lixeira, sem reatribuível nem queima, com Encerradas e o "hoje" de Brasília |
+| **X**, **D18** (em parte), **AA** (a licença sem trilha) | **AB** | a auditoria de quem fez volta, só no banco: conta, sistema ou login sem sessão, por escrito, numa linha que não se reescreve; os históricos das telas ficam só movimentação; o autor do **D23**, do **D24** e do **D25**, que o X tinha tirado, volta com ela |
 | **AA** (em parte: a chave em texto), **AB** (em parte: a marca da chave na auditoria) | **AC** | a chave vira lista: cada uma cobre uma quantidade, e a entrega escolhe uma, obrigatória quando a licença tem chaves |
 | **AA** (em parte: a renovação de mesmo nome) | **AD** | renovar é editar o vencimento; o fim do suporte vai nas notas, a OEM fica com o computador e o comprovante é o número do pedido |
 | **J** (em parte: a entrada e a baixa, a lixeira e a devolução por unidade), **V** (em parte: a lixeira do item na contagem da localização) | **AE** | o estoque segue a lógica da licença: o total é campo da edição, a entrega e a devolução têm dia, a devolução é de N unidades da entrega, e o item que acabou se desativa |
@@ -149,8 +149,11 @@ registram o "Supera:" do mesmo jeito, e o log só fica completo com elas na tabe
 | a nota de que a data da entrega nunca vem do cliente | **AM** | a entrega e a devolução do computador têm o dia, como a licença e o estoque; "hoje" é o dia de Brasília em toda data |
 | **AA**, **AF** (em parte: encerrar em uso e o alerta dele), **AE** (em parte: desativar com unidade fora), **Y** (em parte: o posto com desativar), **AM** (em parte: o que ficava de fora) | **AN** | o que está em uso bloqueia o Encerrar e o Desativar; o posto perde o Desativar; compra e encerramento não são futuros; o fim da ocupação e a devolução pelo posto ganham o dia |
 | o Desativar do catálogo (commit `ff34364`, com a invariante 21), **AF** (em parte: o Desativar em todas as telas), **AN** (em parte: o catálogo que ficava de fora), **Y** (em parte: a localização desativada) | **AO** | categoria, status, fabricante, modelo e localização perdem o Desativar, como no Snipe-IT; a exclusão continua bloqueada pelo uso, e o 409 diz o que tirar |
-| o `conceder-administrador` (sem número), **T** (em parte: o "criado à mão") | **AP** | o administrador nasce por comando, como no Snipe-IT: nome, e-mail e senha como parâmetro; serve à instalação nova e a quem perdeu a senha |
+| **AB** (em parte: o `conceder-administrador`), **T** (em parte: o "criado à mão") | **AP** | o administrador nasce por comando, como no Snipe-IT: nome, e-mail e senha como parâmetro; serve à instalação nova e a quem perdeu a senha |
+| **O** (em parte: a garantia) | **CO** | a data da garantia volta ao computador; os meses, o fim de vida e o cálculo continuam fora |
 | **V** (em parte: não há "apagar de vez"), **AI** (em parte: o componente sem o computador por escrito) | **DL** | da lixeira, o colaborador e o computador se excluem de vez; as linhas fechadas guardam o nome por escrito, e some só a ficha do excluído |
+| **BY** (em parte: o sistema, o processador, o IP e o MAC fora da aba) | **CP** | a aba Máquina mostra o sistema operacional, o processador, o IP e o MAC que o handshake já guardava |
+| **BA** (em parte: a largura da coluna em `%`) | **DH** | a largura vem do tipo da coluna, e a coluna escondida aparece quando cabe |
 
 Quatro decisões nasceram para resolver **um conflito**:
 **D79** (cada job tem a própria linha), **D80** (um `ApiToken` com dono polimórfico), **D81** (uma

@@ -22,7 +22,7 @@ const logger = createLogger('license.maestro');
 // próxima.
 export class LicenseMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // O ALERTA — vencendo, vencida, encerrada ainda em uso. ANTES de `/:id`.
+    // O ALERTA — vencendo e vencida. ANTES de `/:id`.
     server.get('/api/licenses/alerts', async (request: FastifyRequest) => {
       SEM_PARAMETROS.parse(request.query ?? {});
       return listLicenseAlerts();

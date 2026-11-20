@@ -86,10 +86,10 @@ installProcessHandlers();
  * Existem DOIS scripts que sobem o backend, e é fácil ter os dois de pé sem
  * perceber:
  *
- *   npm run dev          concurrently: vite + tsx watch server/server.ts
- *   npm run dev:server   tsx watch server/server.ts
+ *   bun run dev          concurrently: vite + tsx watch server/server.ts
+ *   bun run dev:server   tsx watch server/server.ts
  *
- * Com um `dev:server` esquecido num terminal, todo `npm run dev` colide — e o
+ * Com um `dev:server` esquecido num terminal, todo `bun run dev` colide — e o
  * que aparecia era um stack trace de `node:net` dentro de um "Falha crítica no
  * bootstrap". A pilha não menciona porta, nem script, nem o outro processo:
  * ela aponta para dentro do Node, que é o único lugar onde não está o problema.

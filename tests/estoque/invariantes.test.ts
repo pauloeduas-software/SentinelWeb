@@ -460,13 +460,14 @@ describe('invariante 6 — a ponta do estoque', () => {
 });
 
 describe('a porta fechada e o cargo', () => {
-  it('as NOVE rotas do domínio exigem sessão — a garantia é por OMISSÃO', async () => {
+  it('as ONZE rotas do domínio exigem sessão — a garantia é por OMISSÃO', async () => {
     // Rota nova sem linha no mapa de permissão é rota que QUALQUER sessão
     // alcança, e nada falha: o boot derruba isso (D137/D148), mas o que se
     // prova aqui é o efeito fim-a-fim, rota por rota.
     const falso = '00000000-0000-0000-0000-000000000000';
     const rotas: { metodo: 'get' | 'post' | 'put' | 'delete'; url: string }[] = [
       { metodo: 'get', url: '/api/stock/items' },
+      { metodo: 'get', url: '/api/stock/items/stats' },
       { metodo: 'get', url: `/api/stock/items/${falso}` },
       { metodo: 'get', url: `/api/stock/items/${falso}/checkouts` },
       { metodo: 'get', url: `/api/stock/items/${falso}/history` },
@@ -475,6 +476,7 @@ describe('a porta fechada e o cargo', () => {
       { metodo: 'delete', url: `/api/stock/items/${falso}` },
       { metodo: 'post', url: `/api/stock/items/${falso}/checkout` },
       { metodo: 'post', url: `/api/stock/checkouts/${falso}/checkin` },
+      { metodo: 'get', url: `/api/assets/${falso}/components` },
     ];
 
     for (const { metodo, url } of rotas) {

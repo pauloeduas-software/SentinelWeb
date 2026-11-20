@@ -6,7 +6,7 @@ import { Dado } from '../../../../components/ui/dado';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { PostoDetalhe } from '../../../../types/workstation.types';
 
-// O CARD DE IDENTIFICAÇÃO: o que responde "que mesa é esta e como ela está" antes
+// O CARD DE IDENTIFICAÇÃO: o que responde "que posto é este e como ele está" antes
 // de qualquer aba, como o da ficha do computador.
 
 interface Props {

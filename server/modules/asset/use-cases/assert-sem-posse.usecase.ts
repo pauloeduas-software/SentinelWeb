@@ -26,7 +26,7 @@ import type { ClienteStatusPosse } from './assert-status-posse.usecase';
  *
  * @param client  Prisma global ou o `tx` da transação de quem chama.
  * @param assetId O ativo que está sendo baixado ou excluído.
- * @param sujeito Quem a frase nomeia — a etiqueta, ou "Este ativo".
+ * @param sujeito Quem a frase nomeia — a etiqueta, ou "Este computador".
  * @param verbo   O que ele não pode: 'receber baixa', 'ir para a lixeira'.
  */
 export async function assertSemPosse(

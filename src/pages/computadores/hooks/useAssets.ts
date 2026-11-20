@@ -18,7 +18,7 @@ import { useReverterBaixa } from './useReverterBaixa';
 
 const VISTAS: readonly AssetView[] = ['active', 'retired', 'trashed'];
 
-// Estado da tela de ativos: página, busca, vista e filtros, na URL (`useListaNaUrl`),
+// Estado da tela Computadores: página, busca, vista e filtros, na URL (`useListaNaUrl`),
 // e o modal, aqui.
 
 export function useAssets() {
@@ -125,7 +125,7 @@ export function useAssets() {
   const openBaixa = (asset: Asset) => setEmBaixa(asset);
   const closeBaixa = () => setEmBaixa(null);
 
-  /** A linha inteira abre a tela do ativo — a URL que se cola no chamado. */
+  /** A linha inteira abre a ficha do computador — a URL que se cola no chamado. */
   const abrirDetalhe = (asset: Asset) => navigate(`/computadores/${asset.id}`, comFiltros(parametros));
 
   // Como no handleSubmit: o erro SOBE para o modal mostrar a mensagem do
@@ -224,7 +224,7 @@ export function useAssets() {
     categoryId,
     changeCategoria,
     loading: isPending,
-    // Sem isto, servidor fora do ar virava "Nenhum ativo cadastrado" com a dica
+    // Sem isto, servidor fora do ar virava "Nenhum computador cadastrado" com a dica
     // de cadastrar o primeiro (`EstadoDaLista`).
     erro: error ? error.message : null,
     modalAberto,

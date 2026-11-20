@@ -40,7 +40,7 @@ describe('o Gpus do handshake', () => {
   it('para em 16 placas', async () => {
     const agente = await conectarAgente(api, 'hwid-placas-demais');
     await agente.handshake({
-      Gpus: Array.from({ length: 40 }, (_, indice) => ({ Name: `Placa ${indice}`, MemoryBytes: null })),
+      Gpus: Array.from({ length: 40 }, (_, indice) => ({ Name: `Placa ${indice}` })),
     });
 
     const endpoint = await esperarPor('as placas gravadas', () =>

@@ -98,7 +98,7 @@ export function useUsers() {
   };
 
   // DESATIVAR É UM BOTÃO DA LINHA, não uma caixa no formulário — o padrão das
-  // listas do sistema (Configurações e Colaboradores também). Desativar não
+  // listas do sistema (Colaboradores também). Desativar não
   // apaga: a conta fica na lista, só não entra mais. A confirmação é só na ida;
   // reativar não tem o que perder.
   const handleAlternarAtivo = async (user: User) => {

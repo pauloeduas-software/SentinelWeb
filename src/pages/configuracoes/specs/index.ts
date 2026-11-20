@@ -100,7 +100,7 @@ const modelo: CatalogUiSpec = {
     { key: 'modelNumber', label: 'Número do modelo', tipo: 'text' },
     { key: 'manufacturerId', label: 'Fabricante', tipo: 'reference', rota: 'manufacturers', obrigatorio: true,
       ajuda: 'Não achou? Cadastre antes na aba Fabricantes.' },
-    // Só categorias de ATIVO: um modelo de equipamento não pertence a uma
+    // Só categorias de COMPUTADOR: um modelo de equipamento não pertence a uma
     // categoria de licença.
     { key: 'categoryId', label: 'Categoria', tipo: 'reference', rota: 'categories', filtroTipo: 'ASSET', obrigatorio: true,
       ajuda: 'O computador herda daqui a categoria.' },

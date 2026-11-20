@@ -22,7 +22,7 @@ import { motivosDaBaixaSeeder } from './motivos-da-baixa.seed';
 
 // NÃO HÁ SEED DE CONTA. O seed só cria o que o sistema precisa para funcionar
 // (configuração, categorias, status, motivos da baixa); o primeiro administrador nasce pelo
-// `npm run acesso:administrador`, por quem instala (AP) — uma conta semeada com
+// `bun run acesso:administrador`, por quem instala (AP) — uma conta semeada com
 // senha de `.env` era uma porta que reabria sozinha toda vez que alguém rodava
 // o seed de novo.
 const seeders: Seeder[] = [
@@ -52,7 +52,7 @@ export async function semearBanco(): Promise<void> {
   logger.info(`[Seed] Concluído: ${seeders.length} ${seeders.length === 1 ? 'seeder' : 'seeders'}.`);
 }
 
-// Só quando este arquivo é o PONTO DE ENTRADA (`npm run db:seed`). Importado
+// Só quando este arquivo é o PONTO DE ENTRADA (`bun run db:seed`). Importado
 // como módulo — que é o caso do harness — ele apenas oferece `semearBanco` e
 // não roda nada sozinho: semear no import faria todo teste que tocasse neste
 // arquivo escrever no banco antes da primeira linha do próprio teste.

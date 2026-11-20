@@ -16,7 +16,7 @@ interface AlvoDaPosse {
  * Existia duplicado no histórico do ativo (`asset-history.usecase.ts`) e passou
  * a ser preciso também no e-mail de entrega. Mora aqui porque é leitura do
  * `ASSIGNMENT_SELECT`, que é do domínio de posse, e porque uma segunda cópia
- * divergiria na primeira vez que um dos três alvos mudasse de forma.
+ * divergiria na primeira vez que um dos dois alvos mudasse de forma.
  *
  * DEVOLVE `null` QUANDO O ALVO NÃO VEIO, e não um texto de reserva. É o que o
  * histórico precisa: com um rótulo sempre preenchido, a aba escreveria

@@ -10,8 +10,8 @@ import type { Posto } from '../../../types/workstation.types';
 // clique — não conhece query nem HTTP (docs/referencia/arquitetura.md).
 //
 // O que cada linha responde, e que nenhuma tela de ITAM de prateleira responde:
-// QUEM está na mesa, QUAL computador está nela, pela etiqueta, como no card da
-// ficha, e se está VAGA — equipamento parado sem ninguém respondendo
+// QUEM está no posto, QUAL computador está nele, pela etiqueta, como no card da
+// ficha, e se está VAGO — equipamento parado sem ninguém respondendo
 // (docs/referencia/modelo-de-posse.md).
 //
 // A LINHA INTEIRA ABRE A FICHA, e o `⋯` começa pela operação, como o Entregar de

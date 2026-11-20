@@ -14,7 +14,7 @@ import type { Cargo } from './cargo';
 // a tabela de rotas do Fastify no boot** (`infra/http/permission-guard.ts`).
 // Rota registrada sem linha aqui **derruba o processo**, com o nome dela no
 // erro. O esquecimento deixa de ser uma API aberta em silêncio e passa a ser um
-// boot que não sobe — que aparece no primeiro `npm test`.
+// boot que não sobe — que aparece no primeiro `bun run test`.
 //
 // POR QUE EXATO E NÃO POR PREFIXO: um mapa de prefixos (`/api/assets/* →
 // ADMIN`) é mais curto e destrói a garantia. `POST /api/assets/:id/wipe`
@@ -32,8 +32,8 @@ import type { Cargo } from './cargo';
 //                  vincular a máquina descoberta (AV).
 //   `SUPERVISOR` — o que apaga ou fecha registro (excluir, lixeira, baixa,
 //                  encerrar), o dinheiro (licença; o custo é o D77), a estrutura
-//                  (posto, catálogo) e o que age sobre o sistema ou a máquina
-//                  (comando, reconciliar, configurar a descoberta). Desativar vai
+//                  (posto, catálogo) e o que age sobre a máquina (comando).
+//                  Desativar vai
 //                  pelo `PUT` de edição, então o controller confere à parte.
 //   `ADMIN`      — as contas: Usuários.
 //

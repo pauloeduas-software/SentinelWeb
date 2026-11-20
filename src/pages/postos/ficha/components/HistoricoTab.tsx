@@ -7,11 +7,11 @@ import LinhaDoTempo from '../../../../components/LinhaDoTempo';
 import { formatarDiaDoInstante } from '../../../../helpers/format.helper';
 import type { EventoDoPosto } from '../../../../types/workstation.types';
 
-// A LINHA DO TEMPO do posto: o que passou pela mesa (BP). TRÊS fontes, uma lista:
+// A LINHA DO TEMPO do posto: o que passou pelo posto (BP). TRÊS fontes, uma lista:
 //
 //   OCUPACAO   quem entrou e saiu, com o turno;
 //   POSSE      o computador entregue e devolvido;
-//   ESTOQUE    o estoque entregue à mesa, por entrega.
+//   ESTOQUE    o estoque entregue ao posto, por entrega.
 //
 // As outras abas dizem o que ESTÁ, e esta diz o que FOI.
 

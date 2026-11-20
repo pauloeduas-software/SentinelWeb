@@ -16,7 +16,7 @@ import type {
 // listagem, o detalhe, com quem está, o histórico e a aba Componentes do
 // computador — e a entrega e a devolução invalidam também COLABORADORES (a
 // unidade no nome de alguém trava a desativação dele), POSTOS (a ficha mostra o
-// estoque da mesa) e COMPUTADORES (o histórico mostra o componente, AI).
+// estoque do posto) e COMPUTADORES (o histórico mostra o componente, AI).
 
 /** A listagem: o que toda lista aceita, sem lixeira e sem abas, a categoria e o status. */
 export type ParamsDoEstoque = Omit<ListParams, 'view'> & {
@@ -150,7 +150,7 @@ export function useDeleteStockItem() {
   });
 }
 
-/** A ENTREGA: `qty` unidades a um colaborador ou a um posto, num dia. */
+/** A ENTREGA: `qty` unidades a um colaborador, a um posto ou a um computador, num dia. */
 export function useCheckoutStock() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -20,6 +20,16 @@ export function textoDaPosse(posse: PosseResolvida): string {
 }
 
 /**
+ * Para onde a linha do responsável leva (CJ): a ficha do posto, ou a do colaborador que
+ * recebeu direto. Sem posse aberta, nada.
+ */
+export function caminhoDaPosse(asset: Pick<Asset, 'posse' | 'postoAtual'>): string | null {
+  const noPosto = asset.posse?.targetType === 'WORKSTATION';
+  const pessoa = asset.posse?.responsaveis.find((responsavel) => responsavel.via === 'DIRETO');
+  return caminhoDoResponsavel({ posto: noPosto ? asset.postoAtual?.id : null, colaborador: noPosto ? null : pessoa?.id });
+}
+
+/**
  * Por que o botão de ENTREGAR está travado — ou `null`, se não está.
  *
  * Só ativo de status `DEPLOYABLE` ("Disponível") pode ser entregue: é a regra do
@@ -38,16 +48,6 @@ export function textoDaPosse(posse: PosseResolvida): string {
  * patrimônio, e a baixa não mexe no status — um vendido pode estar
  * "Disponível". O servidor recusa com 409; o botão não oferece.
  */
-/**
- * Para onde a linha do responsável leva (CJ): a ficha do posto, ou a do colaborador que
- * recebeu direto. Sem posse aberta, nada.
- */
-export function caminhoDaPosse(asset: Pick<Asset, 'posse' | 'postoAtual'>): string | null {
-  const noPosto = asset.posse?.targetType === 'WORKSTATION';
-  const pessoa = asset.posse?.responsaveis.find((responsavel) => responsavel.via === 'DIRETO');
-  return caminhoDoResponsavel({ posto: noPosto ? asset.postoAtual?.id : null, colaborador: noPosto ? null : pessoa?.id });
-}
-
 export function bloqueioDaEntrega(asset: Pick<Asset, 'posse' | 'status' | 'retiredAt'>): string | null {
   if (asset.posse?.assignmentId != null) return 'Já entregue: devolva antes de entregar de novo';
   if (asset.retiredAt) return 'Baixado: reverta a baixa para entregar';

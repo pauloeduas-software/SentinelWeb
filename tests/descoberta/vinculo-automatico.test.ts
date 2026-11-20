@@ -142,7 +142,7 @@ describe('a série que não prova nada não liga', () => {
     expect((await linhaDaLista(nova.id)).aviso).toBe(`A série é a de ${ativo.assetTag}, que teve baixa.`);
   });
 
-  it('a de um computador que já tem máquina: é a troca de placa-mãe', async () => {
+  it('a de um computador que já tem máquina: a placa-mãe trocada com a reinstalação', async () => {
     const ativo = await computador('SN-PLACA-NOVA', 'Placa trocada');
     const velha = await maquina('placa-velha', { Hostname: 'pc-placa-velha' });
     await api.post(`/api/endpoints/${velha.id}/link`, { assetId: ativo.id });

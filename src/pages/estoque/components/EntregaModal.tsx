@@ -78,8 +78,8 @@ export default function EntregaModal({ item, onClose, onSubmit }: EntregaModalPr
       await onSubmit(corpo);
     } catch (falha) {
       // É aqui que aparecem o 409 de sem unidade disponível (com os números), o
-      // do item desativado no meio, o do colaborador desativado, o do posto
-      // desativado e o do computador baixado no meio.
+      // do item desativado no meio, o do colaborador desativado e o do
+      // computador baixado no meio.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);

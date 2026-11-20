@@ -7,7 +7,7 @@
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D39–D44, D90–D94, G da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC, AD, AF, AK e AN.
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AA, AC, AD, AF, AK, AN e DG.
 
 ---
 
@@ -326,6 +326,8 @@ já entram — a *referência* ao documento existe, o arquivo é que não.
 >
 > **Superada em parte por [CY](./reconciliacao.md#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso):** o `installedSoftware` sai do tipo e do parser.
 
+> **Supera em parte:** [D81](./plataforma.md#d81--um-arquivo-e-um-formato-de-cifra-para-os-dois-usos) (a cifra para os dois usos) e [D39](#d39--assento-de-licença-não-vai-para-um-posto) (o alvo da licença sem o pacote).
+
 **Decidido:** saem `license-compliance`, `normalize-software`, `list-software-packages` e
 `software-key.helper`; `SoftwarePackage`, `SoftwareInstallation` e `LicenseSoftware` saem do
 schema, com os sete índices deles. `Endpoint` perde `installedSoftware` e os dois hashes de
@@ -346,7 +348,7 @@ e do hash do que o agente reporta — uma cadeia inteira que só serve a essa pe
 núcleo ou à ponte" — e a conformidade de licença **é** a ponte original do projeto, mas a
 segunda rodada decidiu que o assento materializado (D40) e a reconciliação de contrato (D41, D90,
 D92) já são a demonstração da convergência onde ela mais conta: dinheiro e assento nominal. A
-conformidade por hash de instalação era uma segunda demonstração da mesma tese, pagando de novo
+conformidade por hash de instalação era uma segunda demonstração da mesma ponte, pagando de novo
 pelo que o estoque e a ocupação já provam.
 
 **Por quê a cifra não sobrevive sem o produto que a usava:** o
@@ -784,7 +786,7 @@ data de compra, porque um item junta unidades compradas em dias diferentes.
 > **Supera em parte:** [G](#g--software-instalado-e-conformidade-de-licença-saem-licença-vira-cadastro-simples)
 > (o corte sem volta prevista).
 
-**Decisão** (2026-11-16, revendo o artigo do TCC): a coleta do software instalado e a conformidade de
+**Decisão** (2026-11-16): a coleta do software instalado e a conformidade de
 licença deixam de ser corte definitivo e passam a trabalho futuro declarado. Nada muda no código agora:
 a licença continua cadastro com quantidade e entregas ([AA](#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)),
 o servidor não guarda programas e o agente não os manda.
@@ -795,7 +797,7 @@ o servidor não guarda programas e o agente não os manda.
 
 **Por quê:** a conformidade é a pergunta que o ITAM mais faz ao RMM ("o que está instalado bate com o
 que foi comprado?"), e o G a tirou pelo custo da cadeia inteira, não por ela não servir. Declarada como
-futura, o artigo e esta pasta dizem a mesma coisa.
+futura, fica escrito que ela volta, e por onde.
 
 **O que não muda:** o G continua valendo para o presente: sem catálogo de pacotes, sem tela de
 conformidade e sem `installedSoftware` no parser ([CY](./reconciliacao.md#cy--o-servidor-lê-o-que-o-sentinelagente-manda-e-só-isso)).

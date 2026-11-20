@@ -27,9 +27,4 @@ export const assignmentController = {
     // 200, e não 201: a devolução FECHA a posse que já existia.
     return checkinAsset(id, data, atorDaRequisicao(request));
   },
-
-  // Sem query string nenhuma, e é de propósito: o recorte é a definição de
-  // vencido, não uma preferência de quem
-  // consulta. Filtro por pessoa ou por local entraria quando existir a tela que
-  // o peça — e aí como parâmetro validado, nunca como `where` vindo do cliente.
 };

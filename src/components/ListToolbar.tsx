@@ -11,8 +11,8 @@ import { cn } from '../helpers/cn.helper';
 interface ListToolbarProps {
   /**
    * Omitidos onde não há o que buscar, e aí o campo não aparece — é a mesma
-   * opcionalidade que a aba de lixeira já tinha. Hoje toda listagem que usa a
-   * barra tem busca; um campo inerte prometeria uma função que não existe.
+   * opcionalidade que a aba de lixeira já tinha. Hoje só a aba de ficha
+   * (`BarraDaFicha`) usa a barra sem busca; um campo inerte prometeria uma função que não existe.
    */
   search?: string;
   onSearchChange?: (value: string) => void;

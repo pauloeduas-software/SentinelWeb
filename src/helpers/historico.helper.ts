@@ -1,9 +1,9 @@
 // A LEITURA DE UM EVENTO DE HISTÓRICO — funções puras, compartilhadas pelas
-// abas Histórico do ativo, da pessoa e do posto.
+// abas Histórico do computador, da pessoa e do posto.
 //
 // Nasceu dentro de `ativos/detalhe/helpers/`, quando o ativo era o único
 // com linha do tempo, e mudou para cá quando a pessoa ganhou a dela. O que
-// ficou lá é o que É do ativo — a frase do título; o que veio para cá é o que vale para qualquer trilha.
+// ficou lá, hoje `pages/computadores/ficha/helpers/`, é o que É do ativo — a frase do título; o que veio para cá é o que vale para qualquer trilha.
 //
 // As trilhas são só movimentação (entregas, devoluções, postos, licenças). O
 // diff de cadastro e edição fica na auditoria, no banco (AB), e não chega à tela.

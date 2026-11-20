@@ -37,7 +37,7 @@ export const NOME_DO_CARGO: Readonly<Record<Cargo, string>> = {
  * `true` quando `cargo` é conhecido.
  *
  * Usado na borda: o que vem do mapa de rotas é escrito à mão e chega pelo
- * `permission-guard` como `string` — o core não conhece `Cargo`.
+ * `permission-guard` como `string` — a `infra` não conhece `Cargo`.
  */
 export function ehCargo(valor: unknown): valor is Cargo {
   return typeof valor === 'string' && (CARGOS as readonly string[]).includes(valor);

@@ -3,11 +3,8 @@ import type { Cargo } from './helpers/cargo';
 // `request.cargo` ganha tipo de verdade em todo o backend.
 //
 // POR QUE NÃO DENTRO DE `request.user`: a allowlist de `user-select.helper.ts`
-// responde "o que é público de um usuário", não "o que ele pode fazer" — e ela
-// viaja embutida em toda posse e ocupação do inventário. Misturar
-// autorização ali faria a pergunta errada vazar para cada linha de histórico de
-// todo ativo. Quem lê o próprio acesso pede `GET /api/auth/me`, que devolve o
-// cargo de propósito.
+// responde "o que é público de um usuário", não "o que ele pode fazer". Quem lê
+// o próprio acesso pede `GET /api/auth/me`, que devolve o cargo de propósito.
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -22,7 +19,8 @@ declare module 'fastify' {
     cargo?: Cargo;
     /**
      * A conta entrou com uma senha temporária e ainda não a trocou (AR). Só
-     * `GET /api/auth/me` lê: é como o painel descobre que deve mostrar a troca.
+     * `/api/auth/me` e Minha conta o leem: é como o painel descobre que deve
+     * mostrar a troca.
      */
     deveTrocarSenha?: boolean;
   }

@@ -1,7 +1,7 @@
 /**
  * Um registro que a frase do erro cita e que a tela pode abrir — o computador,
- * a licença ou o item de estoque que precisa voltar, ou o posto que precisa ser
- * encerrado, antes de desativar quem está com ele (AA, AE); ou a máquina que
+ * a licença ou o item de estoque que precisa voltar, ou o posto de onde a
+ * saída precisa ser registrada, antes de desativar quem está com ele (AA, AE); ou a máquina que
  * precisa ser desvinculada antes da baixa ou da lixeira do computador (CL).
  */
 export interface ReferenciaDoErro {

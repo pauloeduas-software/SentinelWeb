@@ -3,9 +3,9 @@ import { normalizeSerial, normalizeUuid } from '../../server/modules/reconciliat
 
 // O LIXO DE FÁBRICA RECONHECIDO SEM SEPARADORES (CT) — funções puras, sem banco.
 //
-// O SentinelAgente faz o HWID com o serial sem `-`, `:` e espaço; se a limpeza
-// daqui olhasse o valor com separadores, `0000-0000` passaria nos dois lados e
-// toda máquina com ele ganharia o mesmo HWID e casaria com o mesmo computador.
+// O SentinelAgente confere o serial sem `-`, `:` e espaço antes de mandar; se a
+// limpeza daqui olhasse o valor com separadores, `0000-0000` passaria, e toda
+// máquina com ele casaria com o mesmo computador.
 
 describe('o serial de fábrica', () => {
   it.each([

@@ -7,7 +7,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 
 // INVARIANTE 3 — o tipo de um status em uso não muda (`docs/referencia/invariantes.md`).
 //
-// É a única das quatro que mora inteiramente na APLICAÇÃO, e a razão está na
+// Mora inteiramente na APLICAÇÃO, e a razão está na
 // forma da regra: "mudou de X para Y **e** há quem aponte". Precisa do valor
 // anterior e de um `COUNT` em outra tabela — nem índice nem CHECK fazem isso.
 //
@@ -116,7 +116,7 @@ describe('o catálogo não tem lixeira (D8) — a proteção é o 409 por uso', 
 //
 // As duas contagens esqueciam a licença: a categoria de LICENÇA trocava de tipo
 // com licenças dentro, e o delete dava 0 e caía no P2003 cru ("em uso por outro
-// cadastro"), sem o número. A licença da LIXEIRA conta: a FK é `Restrict` e
+// cadastro"), sem o número. A licença ENCERRADA conta: a FK é `Restrict` e
 // segura do mesmo jeito.
 
 /** Uma categoria nova, pela API. */
@@ -188,7 +188,7 @@ describe('Manufacturer — a licença conta como uso', () => {
 // ── AS REFERÊNCIAS DO MODELO ────────────────────────────────────────────────
 //
 // O ativo herda a categoria do modelo: um modelo numa categoria de licença ou
-// de estoque leva todos os ativos dele para fora da tela de Ativos. E um id
+// de estoque leva todos os ativos dele para fora da tela de Computadores. E um id
 // inexistente caía no P2003, que diz "em uso" para o que não existe.
 
 describe('AssetModel — as referências são conferidas antes de gravar', () => {

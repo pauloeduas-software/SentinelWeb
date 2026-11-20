@@ -139,9 +139,9 @@ A entrega confere **na ordem da tabela** e responde a primeira recusa — o cola
 
 | Tentativa | Resposta |
 |---|---|
-| entrega ou devolução num dia futuro | 422 `data da entrega não pode ser uma data futura` / `data da devolução não pode ser uma data futura` |
+| entrega ou devolução num dia futuro | 422 `Data da entrega não pode ser uma data futura.` / `Data da devolução não pode ser uma data futura.` |
 | quantidade zero, ou mais de 100 numa entrega | 422 |
-| dois alvos, ou nenhum | 422 `Uma entrega tem UM alvo: preencha só a chave que corresponde ao targetType (PERSON).` / `Entrega do tipo "WORKSTATION" exige um posto (targetWorkstationId).` |
+| dois alvos, ou nenhum | 422 `Uma entrega tem um alvo só: informe apenas o do tipo escolhido.` / `A entrega precisa de um posto.` |
 | item, colaborador ou posto que não existe, ou colaborador na lixeira | 404 |
 | colaborador desativado | 409 `Laura Souza está desativado(a) e não pode receber equipamento.` |
 | item desativado | 409 `O item "Mouse USB" está desativado e não recebe entrega. …` |
@@ -232,7 +232,7 @@ e de posse sem que nenhuma dessas contas mude.
 **É posse** (invariante 6): o colaborador com unidade no nome não se desativa nem se exclui, e o
 posto com unidade não se exclui. **A recusa diz quais itens precisam voltar**, pelo nome e com
 quantas — `… responde por 3 unidades de estoque (Mouse USB ×2 e Teclado) …`, `Este posto ainda tem 1
-ativo, 3 unidades de estoque (Cabo HDMI ×3) e 1 responsável. Tire o que está nele agora …` — e manda
+computador, 3 unidades de estoque (Cabo HDMI ×3) e 1 responsável. Tire o que está nele agora …` — e manda
 cada item como `refs` ao lado da frase: a notificação põe um link para a ficha de cada um. Nada
 fecha sozinho.
 

@@ -5,7 +5,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 
 // INVARIANTE 5 — os CHECKs da `assignments`.
 //
-// Este arquivo é o ÚNICO da suíte que escreve no banco por SQL cru, e a exceção
+// Este arquivo escreve no banco por SQL cru, e a exceção
 // é o assunto: um CHECK existe justamente para quem NÃO passa pela API. A
 // validação de aplicação (`assertAlvoCoerente`) já é testada pela porta HTTP em
 // `formularios/` e `invariantes/posse.test.ts`; aqui se prova a rede de baixo,

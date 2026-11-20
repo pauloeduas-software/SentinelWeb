@@ -6,8 +6,8 @@
 > decisão é **superada** por outra, com link entre as duas — é o log que diz por quanto tempo
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
-> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H/CV/CW/CX/CY/CZ/DA/DB/DC/DD/DE/DF/DI/DJ/DK da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> Decisões neste arquivo: D45–D51, D95–D122, e A/D/E/H da segunda rodada (ver
+> [`README.md`](./README.md#a-segunda-rodada-ap)), BY, BZ, CP, CS, CT, CV, CW, CX, CY, CZ, DA, DB, DC, DD, DE, DF, DI, DJ e DK.
 
 ---
 
@@ -29,6 +29,8 @@ patrimônio** só por existir.
 ---
 
 ## D46 — Evidência ambígua é evidência **zero**
+
+> **Completada por [CT](#ct--o-lixo-de-fábrica-se-reconhece-sem-separadores-e-a-lista-cresce):** o serial se confere sem separadores, e as listas de seriais e UUIDs de fábrica crescem.
 
 **Decidido:** qualquer sinal que case com mais de um candidato pontua zero e vira alerta.
 Além disso, listas de lixo conhecidas **antes** da comparação.
@@ -1172,7 +1174,8 @@ serial de produto deixa de não ter identidade.
 
 > **Supera:** [D111](#d111--a-janela-da-agregação-corta-na-meia-noite-não-em-há-n24-horas) (a agregação do uso diário)
 > e [D118](#d118--a-configuração-da-descoberta-ganha-tela-e-a-allowlist-com-ela) (em parte: o `shadowHours`);
-> [BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino) (em parte: o Conhecido e o Não autorizado).
+> [BU](./plataforma.md#bu--o-nome-é-status-em-toda-tela-e-o-valor-vai-no-masculino) (em parte: o Conhecido e o Não autorizado);
+> e, no que citavam dos Ociosos e da triagem, [D159](./escopo.md#d159--a-tela-da-convergência-fica-e-é-a-única-das-cinco-que-fica), [Q](./escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai), [BL](./catalogo-e-ativo.md#bl--o-computador-no-posto-mostra-o-posto-antes-de-quem-o-ocupa), [BO](./posse.md#bo--em-responsáveis-vai-só-o-nome), [AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco) e [CI](./plataforma.md#ci--a-série-vai-embaixo-da-etiqueta-em-toda-tela).
 
 **Decisão** (2026-11-15, olhando a tela contra o que o SentinelAgente manda):
 
@@ -1497,6 +1500,8 @@ bastam para achar quem não atualizou.
 
 ## DF — A máquina tem ficha em Agentes
 
+> **Supera em parte:** [BZ](#bz--vincular-e-desvincular-moram-em-descobertas) (Agentes sem ficha de máquina), [DD](#dd--agentes-ganha-sumidos-e-o-excluir-e-o-excluir-revoga-o-agente) (o `?maquina=`) e [CE](./plataforma.md#ce--o-computador-numa-aba-de-ficha-tem-um-molde-só) (a tabela sem as datas da entrega).
+
 **Decisão** (2026-11-16, pedida olhando a lista de Agentes, e comparada com o GLPI, o Fleet e o NinjaOne):
 
 - **`/agentes/:id` é a ficha da máquina,** no molde das outras: o card com o Status (Conectado, Desconectado), o último
@@ -1527,7 +1532,7 @@ computador, e a máquina não tem outro evento que alguém consulte.
 ## DI — Agentes fechada, e Com agente é o número da vista Com computador
 
 > **Supera em parte:** [CW](#cw--descobertas-perde-a-triagem-os-ociosos-e-os-números-repetidos) (o Sem agente só
-> como o computador sem máquina).
+> como o computador sem máquina) e [DC](#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha) (o aviso na lista).
 
 **Decisão** (2026-11-17, na passada que fechou Agentes):
 

@@ -18,7 +18,11 @@ server/modules/licenca/
 4. Registre em **`app.ts`** (não em `server.ts`): `await LicencaMaestro.setupRoutes(server);`
 5. Declare o cargo mínimo de cada rota em `server/modules/access/helpers/route-permissions.ts`.
    Rota sem linha ali **derruba o boot** (D137) — ver [`acesso.md`](../referencia/acesso.md).
-6. No front: `src/queries/<nome>.queries.ts` (TanStack Query — o padrão, como
+6. Declare o contrato de cada rota em `server/modules/api-docs/helpers/contrato-das-rotas.ts`.
+   Rota sem linha ali reprova `tests/invariantes/contrato-da-api.test.ts`.
+7. Rota de escrita entra na lista de `tests/invariantes/auditoria.test.ts`, que confere que ela
+   grava quem fez ([AB](../decisoes/acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco)).
+8. No front: `src/queries/<nome>.queries.ts` (TanStack Query — o padrão, como
    `src/queries/license.queries.ts`) + `src/pages/<contexto>/`. Um `src/stores/<nome>.store.ts`
    (zustand) só nasce para estado que existe só no navegador — hoje é um, `auth.store.ts`
    ([`arquitetura.md`](../referencia/arquitetura.md)).

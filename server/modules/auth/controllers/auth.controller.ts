@@ -36,7 +36,7 @@ export const authController = {
     // criaria o caminho para o front guardá-lo no `localStorage` — e um XSS
     // passaria a exportar a sessão, que é exatamente o que o httpOnly impede.
     //
-    // O corpo leva o usuário E as permissões — a MESMA forma de `/api/auth/me`,
+    // O corpo leva o usuário E o cargo — a MESMA forma de `/api/auth/me`,
     // de propósito: as duas rotas alimentam o mesmo store no painel, e formas
     // diferentes fariam o menu depender de por onde a sessão entrou.
     return reply
@@ -65,10 +65,9 @@ export const authController = {
   /**
    * Quem está logado — MAIS o cargo dele.
    *
-   * O cargo sai aqui de propósito, e só aqui. Ele não está no
-   * `USER_PUBLIC_SELECT` justamente para não viajar embutido em toda posse e
-   * toda ocupação; esta é a rota em que o cliente pergunta *sobre si mesmo*, e é
-   * o único lugar onde a resposta "o que eu alcanço" faz sentido.
+   * O cargo sai aqui de propósito, como no login e em Minha conta. Ele não está
+   * no `USER_PUBLIC_SELECT`; esta é a rota em que o cliente pergunta *sobre si
+   * mesmo*, e é onde a resposta "o que eu alcanço" faz sentido.
    *
    * PARA QUE O PAINEL PRECISA DISSO: para não desenhar o que vai dar 403. Um
    * item de menu que o cargo da sessão não alcança é um clique que leva a uma

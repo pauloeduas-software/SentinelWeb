@@ -62,7 +62,7 @@ export function usePostos() {
   };
 
   // EXCLUIR é o item do `⋯` da linha, com a frase de Configurações
-  // (`components/catalogo/useCatalog.ts`). Sem Desativar (AN): o posto com algo
+  // (`components/catalogo/useAcoesDoCatalogo.ts`). Sem Desativar (AN): o posto com algo
   // nele recebe o 409 do servidor, que diz o que tirar.
   const handleExcluir = async (posto: Posto) => {
     if (!(await confirmar({

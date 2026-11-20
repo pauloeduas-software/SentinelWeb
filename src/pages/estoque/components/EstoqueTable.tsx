@@ -12,8 +12,8 @@ import { classeDaConta, ehConsumivel, motivoParaNaoEntregar } from '../helpers/e
 // A COLUNA PRINCIPAL É A CONTA: os disponíveis e, embaixo, o total e o que está em
 // uso, como na `LicencaTable`: "3 disponíveis" sozinho não diz se sobrou muito ou pouco.
 //
-// A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DAS
-// CONFIGURAÇÕES (`CatalogTable`): Editar, Desativar/Ativar e Excluir, nessa ordem;
+// A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DO
+// CATÁLOGO (`CatalogTable`): Editar, Desativar/Ativar e Excluir, nessa ordem;
 // o desativado fica na lista, esmaecido, com o Status dizendo; e Excluir sempre clica — o item
 // em uso recebe o 409 do servidor, que diz com quem está e manda devolver (AG).
 

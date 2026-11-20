@@ -60,8 +60,9 @@ export function useAcoesDaMaquina() {
     },
 
     /**
-     * DESVINCULAR é a correção de um vínculo errado e a troca de placa-mãe. Tem
-     * volta, então pergunta sem vermelho. A recusa do servidor é explicação, e
+     * DESVINCULAR é a correção de um vínculo errado e a placa-mãe trocada junto
+     * com a reinstalação. Sem reinstalar, a mesma linha só recebe a série nova.
+     * Tem volta, então pergunta sem vermelho. A recusa do servidor é explicação, e
      * vai para o cartão.
      */
     handleDesvincular: async (maquina: MaquinaDaAcao) => {
@@ -84,13 +85,14 @@ export function useAcoesDaMaquina() {
     /**
      * EXCLUIR é da máquina que não existe mais, ou não deveria estar ali (DD):
      * ela sai da lista e o agente dela perde o acesso. Sem lixeira, e só volta
-     * reinstalando o agente, então pergunta em vermelho. `true` quando excluiu: a
+     * com o agente cadastrado de novo, pelo segredo de instalação, então pergunta
+     * em vermelho. `true` quando excluiu: a
      * ficha volta para a lista.
      */
     handleExcluir: async (maquina: MaquinaDaAcao): Promise<boolean> => {
       if (!(await confirmar({
         titulo: `Excluir a máquina "${maquina.hostname}"?`,
-        descricao: 'Ela sai da lista e o agente dela perde o acesso na hora. Esta ação não tem lixeira: a máquina só volta reinstalando o agente.',
+        descricao: 'Ela sai da lista e o agente dela perde o acesso na hora. Esta ação não tem lixeira: a máquina só volta quando o agente dela for cadastrado de novo, com o segredo de instalação.',
         acao: 'Excluir',
         perigo: true,
       }))) return false;

@@ -5,7 +5,7 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed, motivoDaBaixa } fr
 // AS TRÊS VISTAS DA LISTAGEM DE ATIVOS — e as duas colunas que elas separam (D19):
 //
 //   retiredAt  saiu do PATRIMÔNIO — vendido, descartado, roubado.
-//              É fato contábil e não volta.
+//              É fato contábil, e só volta pelo Reverter a baixa.
 //   deletedAt  foi cadastrado errado. É a lixeira.
 //
 // `active` exclui o baixado; `retired` mostra só ele.

@@ -12,7 +12,7 @@
 // termos que a tiram do log.
 const SENSITIVE_KEY = /senha|password|passwd|token|secret|segredo|apikey|api_key|chave|productkey|product_key|authorization|cookie|jwt/i;
 const MAX_DEPTH = 6;
-const MAX_STRING = 1000; // payload de handshake traz a lista de software instalado
+const MAX_STRING = 1000;
 const MAX_ITEMS = 20;
 
 const truncate = (value: string, max = MAX_STRING) =>

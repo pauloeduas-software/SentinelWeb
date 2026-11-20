@@ -6,8 +6,8 @@ const logger = createLogger('endpoint.expurgo');
 /**
  * Apaga toda amostra de telemetria que tem outra MAIS NOVA da mesma máquina (DA).
  *
- * Quem lê a telemetria são a aba Máquina do computador e a ficha do posto, e as
- * duas mostram só a última amostra. A série não tem leitor desde que a
+ * Quem lê a telemetria são a ficha da máquina, a aba Máquina do computador e a
+ * ficha do posto, e as três mostram só a última amostra. A série não tem leitor desde que a
  * agregação de uso saiu (CW), então guardá-la seria tabela crescendo para ninguém.
  *
  * A última amostra fica mesmo velha: a de uma máquina desligada há uma semana
@@ -16,7 +16,8 @@ const logger = createLogger('endpoint.expurgo');
  * `(endpointId, timestamp DESC)` responde o `EXISTS`.
  *
  * UMA VEZ POR DIA, pela janela diária do `reconcile.job.ts`: com uma amostra por
- * hora, ficam no máximo umas 24 por máquina entre um expurgo e outro.
+ * hora, mais a de cada subida do agente e a de cada Atualizar agora, ficam umas
+ * 24 por máquina entre um expurgo e outro.
  */
 export async function expurgarTelemetriaAntiga(): Promise<number> {
   const count = await prisma.$executeRaw`

@@ -12,7 +12,7 @@ import type { Licenca } from '../../../../types/license.types';
 // O CARD DE IDENTIFICAÇÃO: o que responde "que licença é esta e quantas sobraram" antes
 // de qualquer aba, com todos os campos do cadastro. O vazio não aparece (`Dado`).
 //
-// OS GRUPOS SÃO OS DO COMPUTADOR (BS): a situação e a quem a licença está registrada,
+// OS GRUPOS SÃO OS DO COMPUTADOR (BS): o status e a quem a licença está registrada,
 // o catálogo com o Cadastrado em, e a compra.
 
 interface Props {

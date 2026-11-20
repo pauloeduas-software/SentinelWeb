@@ -27,7 +27,7 @@ import type { Asset } from '../../../types/asset.types';
 // campo é para onde volta na devolução (AW).
 
 /**
- * CLONAR limpa etiqueta e série, e só elas.
+ * CLONAR limpa etiqueta e série.
  *
  * As duas são ÚNICAS entre os vivos (índice parcial no banco): copiadas, o
  * servidor responderia 409 e o clone nunca gravaria. Todo o resto — modelo,
@@ -93,7 +93,7 @@ export default function AssetFormModal({
   const [versao] = useState(asset && !clonar ? asset.updatedAt : undefined);
   // O CUSTO É DO SUPERVISOR (D77). Quem não é nem recebe o valor do servidor, então
   // o campo abriria vazio — e salvar mandaria esse vazio por cima do custo que
-  // só o administrador enxerga. Sem o campo e sem a chave no corpo, edita-se o
+  // só o supervisor enxerga. Sem o campo e sem a chave no corpo, edita-se o
   // resto sem tocar no dinheiro.
   const veCusto = usePode('SUPERVISOR');
   const [salvando, setSalvando] = useState(false);

@@ -41,7 +41,7 @@ beforeAll(async () => {
   api = await criarApi();
 
   agente = await conectarAgente(api, HWID);
-  await agente.handshake({ Hostname: 'pc-do-comando', OsVersion: 'Windows 11 Pro' });
+  await agente.handshake({ Hostname: 'pc-do-comando', OsVersion: 'Ubuntu 24.04' });
 
   const maquina = await esperarPor('a máquina do handshake', () =>
     prisma.endpoint.findUnique({ where: { hwid: HWID } }));
@@ -96,7 +96,7 @@ describe('GET /api/endpoints/:id', () => {
 
     // Os BigInt saem como STRING: sem o `presentMaquinaDaFicha`, o `JSON.stringify`
     // morre com "Do not know how to serialize a BigInt" — na rota que a ficha
-    // consulta a cada poucos segundos.
+    // consulta a cada 30 segundos.
     expect(typeof body.telemetries[0].ramTotal).toBe('string');
   });
 
@@ -184,8 +184,8 @@ describe('POST /api/endpoints/:id/command', () => {
 
     // ESPERAR O SERVIDOR, não o cliente. O `fechar()` resolve no `close` do lado
     // de cá; quem tira o socket do registro é o `close` do lado do servidor, e os
-    // dois são o mesmo processo mas não o mesmo instante. Sem esta espera,
-    // `sendToAgent` acharia o socket obsoleto, devolveria `true`, e o teste
+    // dois são o mesmo processo mas não o mesmo instante. Sem esta espera, o
+    // `sendToAgent` antigo acharia o socket obsoleto, devolveria `true`, e o teste
     // falharia com 200 de vez em quando — o pior tipo de vermelho.
     await esperarPor('a máquina virar OFFLINE', async () => {
       const agora = await prisma.endpoint.findUnique({

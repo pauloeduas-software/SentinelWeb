@@ -52,7 +52,7 @@ export function useAssetQuery(id: string | undefined) {
   });
 }
 
-/** A aba Histórico: as entregas e as licenças do ativo, do mais recente para o mais antigo. */
+/** A aba Histórico: as entregas, as licenças e os componentes do ativo, do mais recente para o mais antigo. */
 export function useAssetHistoryQuery(id: string | undefined, params: ParamsDoHistorico) {
   return useQuery({
     queryKey: assetKeys.history(id ?? '', params),
@@ -188,7 +188,7 @@ export function usePurgeAsset(aposExcluir?: () => void) {
  * DAR BAIXA — o ativo saiu do patrimônio.
  *
  * Mutação separada da edição porque não é um campo do formulário: é operação,
- * com regra própria (ativo entregue é recusado) e linha própria no histórico.
+ * com regra própria (ativo entregue é recusado) e linha própria na auditoria.
  */
 export function useRetireAsset() {
   const queryClient = useQueryClient();
@@ -199,7 +199,7 @@ export function useRetireAsset() {
   });
 }
 
-/** Desfazer a baixa: a venda não saiu, o "roubado" apareceu. */
+/** Reverter a baixa: a venda não saiu, o "roubado" apareceu. */
 export function useUnretireAsset() {
   const queryClient = useQueryClient();
   return useMutation({

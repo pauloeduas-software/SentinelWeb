@@ -66,7 +66,7 @@ export const ASSET_SELECT = {
 // `changes` de um `AuditLog` montado com spread. Na LEITURA, o dado que não
 // deve sair não é lido. As exceções são as escritas que a auditoria retrata — o
 // cadastro, a edição e a exclusão (`create-asset`, `update-asset`,
-// `delete-asset`): leem o custo para o retrato ou o diff, e o cadastro e a
+// `delete-asset`, `purge-asset`): leem o custo para o retrato ou o diff, e o cadastro e a
 // edição o tiram do objeto antes de responder.
 //
 // POR QUE UMA FUNÇÃO E NÃO DOIS `const`: os dois selects têm que ser o MESMO

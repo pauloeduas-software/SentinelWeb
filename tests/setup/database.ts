@@ -13,7 +13,7 @@ import { ADMIN_DE_TESTE } from './admin-de-teste';
 //
 // A consequência é que apontar `DATABASE_URL` para o banco de desenvolvimento
 // APAGA O BANCO DE DESENVOLVIMENTO — inteiro, sem confirmação, na primeira vez
-// que alguém rodar `npm test` com o `.env` errado carregado. Por isso o harness
+// que alguém rodar `bun run test` com o `.env` errado carregado. Por isso o harness
 // não confia em configuração: ele LÊ o nome do banco e se recusa a trabalhar se
 // ele não terminar em `_test`.
 
@@ -52,7 +52,7 @@ export function exigirBancoDeTeste(): string {
     throw new Error(
       `RECUSADO: o harness apaga TODAS as tabelas do banco apontado, e "${nome}" não termina ` +
         `em "${SUFIXO_OBRIGATORIO}".\n` +
-        'Isto é a trava que impede `npm test` de apagar o banco de desenvolvimento. ' +
+        'Isto é a trava que impede `bun run test` de apagar o banco de desenvolvimento. ' +
         'Aponte DATABASE_URL para um banco descartável no .env.test.',
     );
   }
@@ -67,11 +67,11 @@ export function exigirBancoDeTeste(): string {
  * precisa de ordem topológica — `CASCADE` resolve as FKs, que é justamente o
  * que apagar `users` antes de `assignments` exigiria à mão.
  *
- * `RESTART IDENTITY` zera as sequências: sem isso, o número da etiqueta
- * automática (`AppSetting`) continuaria subindo entre arquivos e um teste que
- * espera "ATV-00001" passaria sozinho e falharia na suíte inteira.
+ * `RESTART IDENTITY` zera as sequências, e o schema não tem nenhuma: o número
+ * da etiqueta automática (`AppSetting`) é coluna, e volta a 1 porque o
+ * `TRUNCATE` apaga a linha e o seed a recria.
  *
- * A lista sai do `information_schema`, não de uma constante: tabela nova
+ * A lista sai do `pg_tables`, não de uma constante: tabela nova
  * entraria no reset sem ninguém lembrar de acrescentá-la aqui — e esquecer
  * disso é dado de um arquivo vazando para o próximo, o bug mais caro de
  * diagnosticar que uma suíte pode ter.

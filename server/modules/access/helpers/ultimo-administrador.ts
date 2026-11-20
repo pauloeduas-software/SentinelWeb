@@ -22,7 +22,7 @@ import type { ClientePosse } from '../../assignment/use-cases/resolve-responsibl
 // obrigatório).
 //
 // O ESCAPE, e ele é de linha de comando de propósito:
-// `npm run acesso:administrador`, que cria outro administrador (AP). Uma rota
+// `bun run acesso:administrador`, que cria outro administrador (AP). Uma rota
 // de emergência seria uma rota que cria ADMIN sem ser ADMIN — a porta exata que
 // isto existe para fechar.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -41,7 +41,7 @@ const SEM_SAIDA =
  * (`pg_advisory_xact_lock`) põe essas operações em fila: a segunda só conta
  * depois que a primeira confirmou. É tomada ANTES de qualquer trava de linha,
  * sempre na mesma ordem, e por isso não abre ciclo com a entrega (que trava
- * usuário → ativo e nunca esta). Solta sozinha no fim da transação.
+ * colaborador → ativo e nunca esta). Solta sozinha no fim da transação.
  */
 export async function travarAdministracao(client: { $executeRaw: (q: TemplateStringsArray, ...v: unknown[]) => Promise<number> }): Promise<void> {
   await client.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('ultimo-administrador'))`;
@@ -59,7 +59,7 @@ async function contarAdministradores(client: ClientePosse): Promise<number> {
  *
  * 409 e não 422: o corpo da requisição está válido — é o ESTADO resultante que
  * é inaceitável. Mesma família do "este colaborador ainda responde por 2
- * ativos" da exclusão de colaborador.
+ * computadores" da exclusão de colaborador.
  */
 export async function assertSobraAdministrador(client: ClientePosse): Promise<void> {
   if (await contarAdministradores(client) > 0) return;

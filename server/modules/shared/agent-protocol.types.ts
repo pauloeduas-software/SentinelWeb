@@ -1,4 +1,4 @@
-// Contrato da conversa com o Agente Sentinel pelo WebSocket /agent-hub.
+// Contrato da conversa com o SentinelAgente pelo WebSocket /agent-hub.
 //
 // O SentinelAgente serializa em PascalCase (`Hwid`, `CpuUsagePercentage`). O tipo
 // "cru" abaixo descreve o que chega no fio; os "normalizados", o que os use-cases
@@ -22,18 +22,15 @@ export interface AgentCommandPacket {
  * Identificação e inventário da máquina, enviados no Handshake.
  *
  * OS CAMPOS DE IDENTIDADE SÃO TODOS NULÁVEIS, e isso não é
- * frouxidão de tipo: o agente é um binário que vive FORA deste repositório, e o
- * rollout dele leva semanas. Durante todo esse tempo chega handshake sem nenhum
- * deles — e o que a máquina consegue coletar depende de permissão e de firmware,
- * então ausência é o caso comum, não a exceção. Campo obrigatório aqui
- * transformaria a máquina que coleta menos em erro de parser, e ela sumiria do
- * painel justamente por isso.
+ * frouxidão de tipo: o valor de fábrica não vem, e a máquina sem DMI (VM, ARM)
+ * não tem o serial nem o UUID para mandar. Ausência não é exceção. Campo
+ * obrigatório aqui transformaria a máquina que coleta menos em erro de parser, e
+ * ela sumiria do painel justamente por isso.
  *
  * Quem não manda serial simplesmente não se liga sozinho a um computador: o
  * vínculo automático é pela série única (docs/decisoes/reconciliacao.md, DC).
  *
  * O QUE CHEGA, e onde cada campo é gravado, está em `docs/referencia/agente.md`.
- * Valor de fábrica chega nulo.
  */
 export interface HandshakeData {
   hwid: string;
@@ -45,7 +42,10 @@ export interface HandshakeData {
   localIp: string | null;
   cpuModel: string | null;
 
-  /** O número de série gravado no firmware. A série única liga a máquina ao computador sozinha. */
+  /**
+   * O serial do produto, ou o da placa-mãe quando o do produto é de fábrica. A
+   * série única liga a máquina ao computador sozinha.
+   */
   biosSerial: string | null;
   /** O identificador que o firmware dá ao produto. Sobrevive à reinstalação. */
   systemUuid: string | null;
@@ -69,7 +69,9 @@ export interface HandshakeData {
 
 /**
  * Uma placa de vídeo, em PascalCase como chegou: é assim que ela vai para a
- * coluna Json e que o front a lê. `MemoryBytes` nulo quando o driver não diz.
+ * coluna Json e que o front a lê. `MemoryBytes` nulo quando não vem: na placa
+ * integrada (menos a AMD sem o `hwmon`, que vem com a reserva da BIOS) e quando
+ * o driver não diz.
  */
 export type GpuData = {
   Name: string;
@@ -88,7 +90,10 @@ export type DiskData = {
   UsedGb: number;
 };
 
-/** Amostra de uso de recursos, enviada periodicamente. */
+/**
+ * Amostra de uso: 10 s depois da primeira conexão desde que o agente subiu, de
+ * hora em hora e a cada `REFRESH`.
+ */
 export interface TelemetryData {
   hwid: string;
   cpuUsage: number;

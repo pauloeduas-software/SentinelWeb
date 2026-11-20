@@ -85,8 +85,8 @@ server/
 
 | Domínio | O que é | Model do Prisma |
 |---|---|---|
-| `agent` | Conversa WebSocket com o Agente Sentinel (C#). Só transporte. | — |
-| `endpoint` | Máquina descoberta pelo agente (lado RMM, [`agente.md`](agente.md)) + telemetria (só a última amostra de cada máquina fica, com expurgo uma vez por dia) + comandos | `Endpoint`, `Telemetry` |
+| `agent` | Conversa WebSocket com o SentinelAgente (C#): o cadastro da máquina e o transporte. | `AgentCredential` |
+| `endpoint` | A máquina que o agente apresenta (lado RMM, [`agente.md`](agente.md)) + telemetria (só a última amostra de cada máquina fica, com expurgo uma vez por dia) + comandos | `Endpoint`, `Telemetry`, `AgentCredential` |
 | `asset` | Ativo do ITAM — o `Asset` do vocabulário do Snipe-IT | `Asset` |
 | `catalog` | As SETE tabelas de catálogo, com UM CRUD genérico dirigido por spec — o colaborador inclusive | `Category`, `StatusLabel`, `RetireReason`, `Manufacturer`, `AssetModel`, `Location`, `Person` |
 | `settings` | Configuração global: a etiqueta automática (prefixo, zeros, próximo número) Idioma, moeda e formato de data são fixos no código (`src/helpers/format.helper.ts`) | `AppSetting` |
@@ -95,7 +95,7 @@ server/
 | `person` | **O colaborador** — quem recebe equipamento. O cadastro é do `catalog` (a única aba com lixeira); aqui ficam a ficha, o histórico, a contagem da posse aberta e a trava da linha | `Person` |
 | `assignment` | **Posse**: entrega e devolução de ativo, com alvo polimórfico (pessoa ou posto) e o histórico de quem teve o quê | `Assignment` |
 | `occupancy` | **Ocupação do posto**: quem trabalha em qual posto, e em que turno | `WorkstationOccupant` |
-| `license` | **Licenças**: o contrato, a quantidade comprada e as entregas a colaborador ou computador — sem vaga numerada nem lixeira ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)); ver [`licencas.md`](licencas.md) | `License`, `LicenseCheckout` |
+| `license` | **Licenças**: o contrato, a quantidade comprada e as entregas a colaborador ou computador — sem vaga numerada nem lixeira ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)); ver [`licencas.md`](licencas.md) | `License`, `LicenseKey`, `LicenseCheckout` |
 | `stock` | **Estoque**: o que tem quantidade em vez de patrimônio individual — um tipo, saldo sempre calculado ([J](../decisoes/estoque.md#j--o-estoque-volta-como-stockitem--stockmovement)), na lógica da licença ([AE](../decisoes/estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira)) | `StockItem`, `StockMovement` |
 | `reconciliation` | **Convergência RMM × ITAM**: o vínculo entre a máquina descoberta e o computador cadastrado, à mão ou pela série única no handshake ([DC](../decisoes/reconciliacao.md#dc--descobertas-vira-agentes-e-a-série-liga-a-máquina-sozinha)) — sem inferência por conta do sistema operacional ([A](../decisoes/reconciliacao.md#a--a-reconciliação-deixa-de-inferir-pessoa-pela-conta-do-sistema-operacional)) nem fusão de máquinas ([H](../decisoes/reconciliacao.md#h--a-fusão-de-máquinas-sai)) | — |
 | `access` | **Autorização**: o cargo da sessão, o mapa de rotas × cargo mínimo e a invariante "nunca sem administrador" | — |
@@ -149,15 +149,19 @@ resposta de erro.
 | `AppError('O agente de … não está conectado agora.', 409)` | 409 + a mensagem | use-case |
 | Prisma `P2025` (não achou) | 404 "Registro não encontrado." | error-handler |
 | Prisma `P2002` (unique) | 409 "Registro já existe." | error-handler |
+| Prisma `P2003` (chave estrangeira) | 409 "Registro está em uso por outro cadastro." | error-handler |
 | `ZodError` (corpo, query ou parâmetro inválido) | 422 + a frase dos primeiros campos, com maiúscula e ponto | error-handler (`zod-error.ts`) |
 | JSON malformado / corpo grande | 400 / 413 | error-handler |
+| `Content-Type` que não é JSON | 415 "Tipo de conteúdo não aceito. Esta API recebe application/json." | error-handler |
+| Limite de requisições | 429 "Muitas requisições. Tente de novo em instantes." | error-handler |
+| Outro 4xx do Fastify | o mesmo status + "Requisição inválida." | error-handler |
 | Qualquer outro erro | 500 genérico + log completo | error-handler |
 
 `error.message` de banco ou de biblioteca **nunca** vai para o cliente. E o corpo de
 toda resposta de erro é `{ error }` — a frase —, com uma exceção só: quando a frase cita
 registros que a tela pode abrir, `refs` vai ao lado (`AppError(mensagem, status, refs)`) — a
 recusa do colaborador manda os computadores, as licenças, os itens e os postos que ela cita, a
-do ativo, as licenças e os componentes, e a tela põe um link em cada um
+do ativo, as licenças, os componentes e a máquina vinculada, e a do posto, os computadores e os itens, e a tela põe um link em cada um
 ([AA](../decisoes/licencas.md#aa--a-licença-vira-quantidade-e-entregas-sem-vaga-numerada-sem-lixeira-com-encerradas)).
 O 422 de validação não manda o mapa por campo
 ([Q](../decisoes/escopo.md#q--a-varredura-do-código-morto-o-que-não-tem-leitor-sai)). A frase
@@ -208,7 +212,8 @@ mesma lista.
 
 Quase tudo está no primeiro balde: ativos, licenças, postos e usuários são todos
 dado de servidor. O zustand guarda o client state de verdade — a sessão em
-memória (`auth.store.ts`) e o estado da moldura (`hooks/useBarraLateral`, `hooks/useVagaDoTitulo`).
+memória (`auth.store.ts`) e o estado da moldura (`hooks/useBarraLateral`, `hooks/useVagaDoTitulo`, `hooks/useTema`,
+`hooks/useNotificacao`, `hooks/useConfirmacao`).
 Estado de uma tela só (modal aberto, item em edição, seleção)
 continua em `useState` dentro do hook da página: não é global, não precisa de store.
 
@@ -219,8 +224,8 @@ de um `fetch` manual no fim de cada mutação).
 
 Regras práticas:
 
-- **Componente não faz `fetch`.** A escrita sobe por prop (`onSubmit`, `onComando`,
-  `onDelete`) até o hook da página. Ler pode, pelas queries de `src/queries/`: os
+- **Componente não faz `fetch`.** A escrita sobe por prop (`onSubmit`, `onDelete`,
+  `onRestore`) até o hook da página. Ler pode, pelas queries de `src/queries/`: os
   seletores (`ReferenceSelect`, `CategoriaFiltro`), e os formulários
   buscam as próprias opções e o registro que abrem. Uma exceção escreve:
   `components/TelemetriaDaMaquina` (consulta e revalida uma máquina, e manda comando
@@ -233,7 +238,7 @@ Regras práticas:
 - **O erro aparece, nunca vira vazio.** A consulta que falha mostra o aviso ou
   `—` (`EstadoDaLista`, BB), e a mutação mostra a recusa: o formulário exibe
   `error.message`, que o `apiClient` já traduziu da resposta do servidor. Só as
-  consultas de endpoint recarregam sozinhas, a cada 5s.
+  consultas de máquina e a cobertura de Agentes recarregam sozinhas, a cada 30 s.
 - **Cálculo sai do JSX.** Parse de coluna Json, conversão de bytes e cor de
   status moram em `helpers/`.
 - **O `apiClient` traduz o erro num lugar só.** Toda tela mostra
@@ -358,7 +363,7 @@ linha 460 de um documento chamado "Arquitetura". Elas viraram guias:
 
 - [`../guias/criar-uma-migration.md`](../guias/criar-uma-migration.md) — a receita do
   `migrate diff`, por que **nunca** `migrate dev`, e o teste de reconstruir o banco do zero;
-- [`../guias/adicionar-um-dominio.md`](../guias/adicionar-um-dominio.md) — os seis passos, mais
+- [`../guias/adicionar-um-dominio.md`](../guias/adicionar-um-dominio.md) — os oito passos, mais
   a regra de corte de quando quebrar em `use-cases/`.
 
 ## O visual

@@ -44,7 +44,7 @@ interface PermissionGuardOptions {
 
   /**
    * Autoriza, ou LANÇA. Mora no domínio porque "ter a permissão" depende de onde
-   * as permissões da sessão foram penduradas — e disso o core não sabe nada.
+   * as permissões da sessão foram penduradas — e disso a `infra` não sabe nada.
    */
   autorizar: (request: FastifyRequest, permissao: string) => void;
 

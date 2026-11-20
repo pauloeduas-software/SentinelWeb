@@ -10,7 +10,7 @@ import { useNotificacao } from '../../../hooks/useNotificacao';
 type FormularioDaLicenca = 'editar' | 'entregar' | null;
 
 // O QUE SE FAZ COM UMA LICENÇA, na linha da lista e na ficha: as mesmas regras e as
-// mesmas frases nos dois lugares. É o cadastro das Configurações (`useCatalog`, AF),
+// mesmas frases nos dois lugares. É o cadastro do catálogo (`useAcoesDoCatalogo`, AF),
 // com Encerrar/Reabrir no lugar do Desativar/Ativar.
 export function useAcoesDaLicenca({ aoExcluir }: { aoExcluir?: () => void } = {}) {
   const notificar = useNotificacao();
@@ -57,7 +57,7 @@ export function useAcoesDaLicenca({ aoExcluir }: { aoExcluir?: () => void } = {}
   // engoli-lo transforma uma recusa explicada numa tela que parece travada.
   // ─────────────────────────────────────────────────────────────────────────
 
-  // ENCERRAR/REABRIR é o Desativar/Ativar das Configurações (AF), com data: o
+  // ENCERRAR/REABRIR é o Desativar/Ativar do catálogo (AF), com data: o
   // encerramento grava hoje em `terminationDate`, e reabrir apaga a data — a
   // mesma edição do formulário. Confirma só na ida, com a frase do padrão. O
   // botão sempre clica: com entrega aberta, o 409 do servidor manda devolver.
@@ -79,7 +79,7 @@ export function useAcoesDaLicenca({ aoExcluir }: { aoExcluir?: () => void } = {}
     }
   };
 
-  // EXCLUIR, com a frase de Configurações (`useCatalog`). O botão sempre clica:
+  // EXCLUIR, com a frase de Configurações (`useAcoesDoCatalogo`). O botão sempre clica:
   // a licença em uso recebe o 409 do servidor, que diz com quem e manda
   // devolver (AG).
   const handleExcluir = async (licenca: Licenca) => {

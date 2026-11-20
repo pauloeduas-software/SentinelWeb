@@ -40,7 +40,7 @@ let comTeto: ApiDeTeste;
 
 beforeAll(async () => {
   semTeto = await criarApi();
-  // A única chamada do projeto que liga o limitador. Se um dia houver outra,
+  // A única chamada da suíte que liga o limitador. Se um dia houver outra,
   // ela é um erro: o resto da suíte não quer contador nenhum.
   comTeto = await criarApi({ comTetoDeRequisicao: true });
 });
@@ -100,7 +100,7 @@ describe('o teto de requisições por IP', () => {
     // Aqui a decisão é afirmada direto: inverter o `!==` fica vermelho.
     expect(tetoDeRequisicaoLigado('production')).toBe(true);
     expect(tetoDeRequisicaoLigado('development')).toBe(true);
-    // `npm run dev` não define NODE_ENV nenhum: o caso ausente é o de
+    // `bun run dev` não define NODE_ENV nenhum: o caso ausente é o de
     // desenvolvimento, e é o mais fácil de esquecer.
     expect(tetoDeRequisicaoLigado(undefined)).toBe(true);
     expect(tetoDeRequisicaoLigado('test')).toBe(false);

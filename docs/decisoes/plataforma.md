@@ -7,7 +7,8 @@
 > cada regra governou. As supersessões estão em [`README.md`](./README.md).
 >
 > Decisões neste arquivo: D4, D6, D79, D81, D83–D84, D86, e L/M da segunda rodada (ver
-> [`README.md`](./README.md#a-segunda-rodada-ap)).
+> [`README.md`](./README.md#a-segunda-rodada-ap)), AQ, AS, AT, AY, AZ, BA, BB, BC, BF, BG, BH, BK, BR, BS, BT, BU, CA, CC,
+> CD, CE, CH, CI, CJ, CM, DH e DN.
 
 ---
 
@@ -386,6 +387,8 @@ tecnologias e boas práticas, não mais funcionalidades*):
 >
 > **Superada em parte por [AZ](#az--configurações-explica-no-formulário-e-a-página-fica-sem-subtítulo):** a página fica sem subtítulo.
 
+> **Supera em parte:** [F](./relatorios-import-etiquetas.md#f--a-busca-por-qr-sai-com-app_url-resolve-tags-e-by-serial) (a busca por etiqueta: `GET /api/search` sai).
+
 **Decisão.** O visual do painel foi refeito: paleta azulada,
 Inter sem caixa alta, cantos arredondados, densidade compacta no desktop, menu lateral com seções que
 recolhem, menu do usuário no cabeçalho, e tema claro ou escuro: na primeira entrada vale o do sistema, e
@@ -572,6 +575,8 @@ o que vale, a receita de um sistema que já mudou. O que importava já estava em
 
 > **Superada em parte por [BK](#bk--estoque-e-licenças-têm-ficha-em-página):** o link que não abre deixa de ir para o cartão: sem janela, é falha ao carregar, no lugar da ficha.
 
+> **Supera em parte:** [E](./reconciliacao.md#e--descobertas-ganha-vínculo-manual-e-reconciliar-agora) (o placar da varredura ao lado do botão).
+
 **Decisão.** A mesma recusa aparecia em três lugares: no cartão do alto, numa faixa no topo da tela e num texto ao lado do
 botão. Quem clicava no fim de uma lista comprida às vezes nem via a faixa, e nada dizia que a ação tinha dado certo. Agora a
 resposta a um clique tem um lugar só: o cartão de `useNotificacao`, no canto inferior direito.
@@ -648,6 +653,8 @@ tela inteira. Por isso o piso entra aqui, e o resto da densidade fica como está
 
 ## BK — Estoque e Licenças têm ficha em página
 
+> **Supera em parte:** [AE](./estoque.md#ae--o-estoque-segue-a-lógica-da-licença-total-na-edição-entrega-com-dia-desativar-em-vez-de-lixeira) (o link do detalhe), [AY](#ay--o-visual-é-em-tema-claro-e-escuro-e-a-linha-inteira-abre-o-registro) (detalhe é janela), [BA](#ba--o-título-volta-ao-cabeçalho-a-lista-não-se-mexe-e-o-posto-tem-ficha-em-página) (item e licença em janela) e [BF](#bf--a-resposta-a-um-clique-vai-para-o-cartão-do-canto-inferior-direito) (o link que não abre no cartão).
+
 **Decisão.** O item de estoque e a licença saem da janela e ganham ficha em página, em `/estoque/:id` e `/licencas/:id`,
 no molde do posto. Todo registro abre do mesmo jeito: detalhe é página, formulário é painel lateral e a pergunta é
 `confirmar()`. As regras de negócio não mudaram, e nenhuma rota de API é nova. A lista continua como estava.
@@ -677,6 +684,8 @@ recomenda evitar modal quando a pessoa precisa consultar outra informação: ele
 **O que ficou de fora.** "Com quem está" continua lista com a devolução na linha, e não `Card > Table`.
 
 ## BR — A ficha do computador não tem aba Detalhes
+
+> **Supera em parte:** [AB](./acesso.md#ab--a-auditoria-volta-quem-fez-só-no-banco) (a observação da baixa numa aba), [AZ](#az--configurações-explica-no-formulário-e-a-página-fica-sem-subtítulo) (o modelo numa aba) e [BB](#bb--toda-lista-ficha-e-formulário-seguem-o-mesmo-molde) (a primeira aba).
 
 **Decisão.** O computador perde a aba Detalhes, como o item e a licença na BK, e os campos dela sobem para o card. Era a
 única ficha que ainda tinha essa aba. As regras de negócio não mudaram, e nenhuma rota é nova.

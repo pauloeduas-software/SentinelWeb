@@ -11,7 +11,7 @@ const ROTULO_DA_OCUPACAO: Record<string, string> = {
   END: 'Saiu do posto',
 };
 
-/** O estoque entregue à mesa, por entrega. */
+/** O estoque entregue ao posto, por entrega. */
 const ROTULO_DO_ESTOQUE: Record<string, string> = {
   CHECKOUT: 'Recebeu',
   CHECKIN: 'Devolveu',

@@ -77,8 +77,8 @@ export async function fecharPosse(
     select: ASSET_WRITE_SELECT,
   });
 
-  // No histórico do ATIVO, não no da posse: é a linha do tempo do equipamento
-  // que alguém abre para perguntar "por onde isto andou".
+  // Na auditoria do ATIVO, não na da posse: é a linha do tempo do equipamento
+  // que alguém consulta para perguntar "por onde isto andou".
   await recordAudit(client, {
     entityType: 'Asset',
     entityId: posse.assetId,

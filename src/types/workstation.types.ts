@@ -25,7 +25,7 @@ export type PostoView = 'todos' | 'vagos' | 'ocupados' | 'sem-uso';
  * Um evento da aba Histórico do posto — `GET /api/workstations/:id/history`.
  *
  * TRÊS fontes numa lista só: quem entrou e saiu, o computador e o estoque entregues
- * à mesa. Só movimentação: cadastro e edição ficam na auditoria, no banco (AB).
+ * ao posto. Só movimentação: cadastro e edição ficam na auditoria, no banco (AB).
  */
 export interface EventoDoPosto {
   id: string;
@@ -107,8 +107,8 @@ export interface Posto {
 /**
  * O ativo como a FICHA DO POSTO o recebe: o contrato de ativo mais a máquina.
  *
- * O campo a mais existe porque esta tela mostra a telemetria do computador da
- * mesa, e para isso precisa saber se o ativo da mesa tem máquina vinculada e
+ * O campo a mais existe porque esta tela mostra a telemetria do computador do
+ * posto, e para isso precisa saber se o ativo do posto tem máquina vinculada e
  * qual máquina consultar. Ele NÃO está no `Asset` compartilhado de propósito:
  * `endpointId` sairia em toda listagem, em toda criação e em toda edição de
  * ativo, e ali ninguém o usa — `GET /api/workstations/:id` é a única rota que o
@@ -120,7 +120,7 @@ export interface Posto {
 export interface AtivoDoPosto extends Omit<Asset, 'posse'> {
   /** `null` quando o agente ainda não foi vinculado ao ativo. */
   endpointId: string | null;
-  /** O instante da entrega a esta mesa — o mínimo da devolução pela ficha (AM). */
+  /** O instante da entrega a este posto — o mínimo da devolução pela ficha (AM). */
   entregueEm: string | null;
   /** O dia previsto para a devolução, da mesma entrega (CE). */
   devolucaoPrevista: string | null;
@@ -137,6 +137,6 @@ export interface AtivoDoPosto extends Omit<Asset, 'posse'> {
 export interface PostoDetalhe extends Omit<Posto, 'ocupantes'> {
   /** Os ativos entregues ao posto — posse ABERTA com alvo WORKSTATION. */
   ativos: AtivoDoPosto[];
-  /** O estoque na mesa — as entregas ABERTAS com alvo WORKSTATION, uma linha por entrega. */
+  /** O estoque no posto — as entregas ABERTAS com alvo WORKSTATION, uma linha por entrega. */
   itens: EntregaNaFicha[];
 }

@@ -4,7 +4,7 @@
 // específicas e repetidas, e a mentira tem que ser reconhecida ANTES da
 // comparação. Depois é tarde: dois valores iguais já casaram.
 //
-// O D46 em código: lixo conhecido vira `null`, e `null` não pontua.
+// O D46 em código: lixo conhecido vira `null`, e `null` não casa.
 
 /**
  * Seriais que a fábrica deixou em branco.
@@ -12,7 +12,7 @@
  * Não são casos raros: são literalmente o texto que sai de placa-mãe genérica e
  * de máquina montada, e a MESMA string aparece em dezenas de equipamentos.
  * Casar por um deles vincularia a frota inteira ao mesmo ativo — e o pior é que
- * o sistema diria que está certo, com 100 pontos.
+ * o sistema diria que está certo.
  */
 const SERIAIS_DE_FABRICA = new Set([
   // Os do D46.
@@ -49,7 +49,7 @@ const SERIAIS_DE_FABRICA = new Set([
 /**
  * O serial sem separadores, só para reconhecer o lixo: `System Serial Number`,
  * `SystemSerialNumber` e `0000-0000` são o mesmo preenchimento de fábrica (CT).
- * A mesma conta que o SentinelAgente faz antes do hash do HWID.
+ * A mesma conta que o SentinelAgente faz para não mandar o serial de fábrica.
  */
 function compactar(valor: string): string {
   return valor.toLowerCase().replace(/[-:\s]/g, '');
@@ -119,8 +119,8 @@ export function normalizeUuid(valor: string | null | undefined): string | null {
 /**
  * Hostname comparável.
  *
- * O domínio sai (`PC-ANA.empresa.local` → `pc-ana`): a mesma máquina aparece com
- * e sem sufixo dependendo de como o agente leu o nome.
+ * O domínio sai (`PC-ANA.empresa.local` → `pc-ana`): o agente manda o nome curto,
+ * e o nome do computador no cadastro pode vir com o sufixo.
  */
 export function normalizeHostname(valor: string | null | undefined): string | null {
   const limpo = limpar(valor);

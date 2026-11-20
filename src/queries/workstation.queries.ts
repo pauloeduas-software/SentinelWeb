@@ -57,7 +57,7 @@ export function useWorkstationQuery(id: string | null) {
 
 /**
  * A aba Histórico do posto: quem entrou e saiu, e o computador e o estoque entregues
- * à mesa, do mais recente para o mais antigo.
+ * ao posto, do mais recente para o mais antigo.
  */
 export function useWorkstationHistoryQuery(id: string | null, params: ParamsDoHistorico) {
   return useQuery({
@@ -69,7 +69,7 @@ export function useWorkstationHistoryQuery(id: string | null, params: ParamsDoHi
   });
 }
 
-/** Corpo do cadastro de um posto. Na edição, só o que mudou. */
+/** Corpo do cadastro de um posto. Na edição, o formulário inteiro (AF). */
 export interface PostoInput {
   name?: string;
   /** A localização onde o posto fica — obrigatória ao criar. */
@@ -85,7 +85,7 @@ export interface PostoInput {
  * que está nele agora, `AuditLog`.
  *
  * Invalidam DOIS caches: a lista de postos e as OPÇÕES de posto
- * (`catalogKeys.tabela('workstations')`), que os seletores da entrega de ativo, da
+ * (`catalogKeys.tabela('workstations')`), que os seletores da entrega de computador, da
  * de estoque e do vínculo de máquina leem. Sem a segunda, o posto criado não
  * aparecia no seletor — e o excluído continuava sendo oferecido — até o
  * `staleTime` vencer.

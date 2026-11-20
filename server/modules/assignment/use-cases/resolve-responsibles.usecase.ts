@@ -12,10 +12,8 @@ import { INCLUINDO_LIXEIRA } from '../../../infra/database/soft-delete.extension
  * Cliente aceito pela resolução: tanto o global quanto o de transação.
  *
  * `Omit<…, '$'>` tira os métodos de sessão (`$transaction`, `$connect`…) que o
- * cliente de transação não tem — é o que faz o MESMO código servir os dois, e é
- * o que deixa o checkout resolver responsáveis DENTRO da própria transação, sem
- * enxergar um estado que ainda não existe para ninguém. Mesmo padrão do
- * `ClienteCatalogo` (catalog/specs/catalog-spec.types.ts).
+ * cliente de transação não tem — é o que faz o MESMO código servir os dois.
+ * Mesmo padrão do `ClienteCatalogo` (catalog/specs/catalog-spec.types.ts).
  */
 export type ClientePosse = Omit<typeof prisma, `$${string}`>;
 
@@ -160,9 +158,9 @@ function montar(posse: PosseAberta, dicionarios: Dicionarios): PosseResolvida {
 /**
  * A resolução de VÁRIOS ativos em número CONSTANTE de consultas.
  *
- * Esta é a versão que importa. A listagem de ativos resolve 50 linhas de uma
- * vez, e uma consulta por linha seria N+1 — com o agravante de que cada linha
- * custa até duas consultas (posse, ocupantes), ou seja 100 viagens ao banco
+ * Esta é a versão que importa. A listagem de ativos resolve até 100 linhas de
+ * uma vez, e uma consulta por linha seria N+1 — com o agravante de que cada linha
+ * custa até duas consultas (posse, ocupantes), ou seja 200 viagens ao banco
  * para pintar uma página.
  *
  * São no máximo QUATRO `findMany` com `in: [...]`, independentemente de virem 1

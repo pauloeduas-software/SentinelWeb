@@ -31,7 +31,7 @@ function buscarPagina(where: object, query: ListQuery, podeVerCusto: boolean) {
  * categoria vêm em `filtros`, SEPARADOS do
  * `query` genérico: `query` é o que toda listagem do sistema tem (página e
  * busca) e `filtros` é o que só o ITAM entende (D20). O `query.view` que
- * o parser do `core` devolve não é lido aqui — quem manda é `filtros.view`.
+ * o parser da `infra` devolve não é lido aqui — quem manda é `filtros.view`.
  */
 export async function listAssets(
   query: ListQuery,

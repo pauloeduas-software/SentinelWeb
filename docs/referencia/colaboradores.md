@@ -69,12 +69,12 @@ para a lista
 
 São as quatro coisas que a desativação e a exclusão cobram, e cada linha leva
 para onde ela se resolve: o computador, à ficha dele, onde está o Devolver; o
-posto, à ficha do posto, onde está o Encerrar; o item e a licença, à ficha
+posto, à ficha do posto, onde está o Registrar saída; o item e a licença, à ficha
 deles, já filtrada pelo nome dela, onde está o Devolver.
 
 Só o que foi entregue a ELA: o computador do posto que ela ocupa e o estoque da
 mesa ficam na ficha do posto, e as licenças do computador que ela usa, na aba
-Licenças do computador. As abas só mostram: o Devolver e o Encerrar moram no
+Licenças do computador. As abas só mostram: o Devolver e o Registrar saída moram no
 registro que a linha abre.
 
 ## Exclusão, lixeira e desativação

@@ -10,7 +10,8 @@ import { criarAtivo, criarFabricante, criarModelo, idsDoSeed } from '../helpers/
 //
 // O que este arquivo prova é que a máquina excluída NÃO VOLTA sozinha: nem pela
 // conexão que estava aberta, nem pela reconexão com o token, nem por uma conexão
-// aberta antes da exclusão que só manda o handshake depois. Volta reinstalando.
+// aberta antes da exclusão que só manda o handshake depois. Volta com o agente
+// cadastrado de novo, pelo segredo de instalação.
 
 let api: ApiDeTeste;
 let modelId: string;
@@ -36,7 +37,7 @@ function fechamento(socket: WebSocket): Promise<number> {
 }
 
 function handshake(socket: WebSocket, hwid: string) {
-  socket.send(JSON.stringify({ Type: 'Handshake', Payload: { Hwid: hwid, Hostname: `pc-${hwid}`, OsVersion: 'Windows 11' } }));
+  socket.send(JSON.stringify({ Type: 'Handshake', Payload: { Hwid: hwid, Hostname: `pc-${hwid}`, OsVersion: 'Ubuntu 24.04' } }));
 }
 
 /** Cadastra, conecta e manda o handshake: a máquina na lista, com a conexão aberta. */

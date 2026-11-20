@@ -6,7 +6,7 @@ import { exigirBancoDeTeste, nomeDoBanco } from './database';
 
 const exec = promisify(execFile);
 
-// Roda UMA VEZ por execução do `npm test`, no processo principal do vitest,
+// Roda UMA VEZ por execução do `bun run test`, no processo principal do vitest,
 // antes de qualquer arquivo de teste.
 //
 // O que ele garante: o banco de teste EXISTE e está no schema mais recente.

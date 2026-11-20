@@ -27,8 +27,8 @@ import { unretireAsset } from '../use-cases/unretire-asset.usecase';
 // Só HTTP. Sem try/catch: o `parse` do schema rejeita e a rejeição cai no
 // errorHandler, que devolve 422 com o campo que falhou.
 
-// Mesmo schema do `/options` de usuário: só `q`, e `strictObject` recusa o
-// resto em vez de ignorar em silêncio.
+// Só `q` e `maquina`, e `strictObject` recusa o resto em vez de ignorar em
+// silêncio.
 const optionsQuerySchema = z.strictObject({
   q: z.string().trim().max(200, 'busca: máximo de 200 caracteres').optional()
     .transform((valor) => valor || undefined),
@@ -41,7 +41,7 @@ const optionsQuerySchema = z.strictObject({
 
 export const assetController = {
   async list(request: FastifyRequest) {
-    // A vista e os filtros do ITAM saem PRIMEIRO. O parser do `core` valida com
+    // A vista e os filtros do ITAM saem PRIMEIRO. O parser da `infra` valida com
     // `strictObject` e responderia 422 a `?statusType=` ou
     // `?view=retired` — que ele, por decisão de camada, não conhece (D20).
     const { filtros, paraOCore } = separarFiltrosDeAtivo(request.query);
@@ -51,8 +51,8 @@ export const assetController = {
 
     const query = parseListQuery(paraOCore, {
       // `trashable` fica FALSO mesmo havendo lixeira: quem cuida de `?view=`
-      // aqui é o domínio, que entende as três vistas em vez de duas. Ligado, o
-      // `core` também declararia a chave e as duas validações brigariam pela
+      // aqui é o domínio, que entende as três vistas em vez de duas. Ligado, a
+      // `infra` também declararia a chave e as duas validações brigariam pela
       // mesma palavra.
       trashable: false,
     });

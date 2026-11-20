@@ -94,8 +94,8 @@ aberta para ele e **ocupante** atual.
 devolvida e ocupação encerrada perdem a ligação com o posto na exclusão e
 guardam o nome dele por escrito (`targetWorkstationName`, `workstationName`): o
 histórico do ativo continua dizendo "Entregue: Mesa 7", o do item "para a Mesa
-7", e a ficha da pessoa "Entrou no posto: Mesa 7". É o `beforeDelete` da spec, dentro
-da mesma transação, que trava o posto antes de contar o uso: a entrega ou a
+7", e a ficha da pessoa "Entrou no posto: Mesa 7". É o `motivoParaNaoExcluir` da spec, dentro
+da mesma transação, que trava o posto antes de contar o uso, e o `beforeDelete` que escreve o nome: a entrega ou a
 ocupação que chega no meio espera e depois recebe 404, e a troca de nome também
 espera, então o nome escrito é mesmo o último. As FKs continuam `Restrict`,
 como rede de baixo.

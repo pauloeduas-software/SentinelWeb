@@ -21,7 +21,7 @@ export function useOcupantes(workstationId: string | null) {
     await adicionar.mutateAsync({ workstationId, data: dados });
   };
 
-  // Encerrar não apaga a linha, mas também não se desfaz: recolocar a pessoa
+  // Registrar a saída não apaga a linha, mas também não se desfaz: recolocar a pessoa
   // abre uma ocupação NOVA. A confirmação é a da linha, com o dia em que a
   // pessoa saiu (AM), como a devolução da licença.
   const handleEncerrar = async (ocupante: WorkstationOccupant, dia: string) => {
@@ -43,7 +43,7 @@ export function useOcupantes(workstationId: string | null) {
     // pendente para sempre, e a tabela mostraria "carregando" com o painel fechado.
     carregando: workstationId != null && isPending,
     // A consulta FALHOU: sem isto a lista vazia virava "Posto vago" — dizer que
-    // ninguém responde pelos ativos de uma mesa porque a rede caiu é exatamente
+    // ninguém responde pelo que foi entregue a um posto porque a rede caiu é exatamente
     // o alarme falso que esta tela não pode dar.
     erro: workstationId != null && error ? error.message : null,
     handleAdicionar,

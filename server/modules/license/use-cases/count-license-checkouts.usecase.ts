@@ -9,7 +9,7 @@ export type ClienteLicenca = Omit<typeof prisma, `$${string}`>;
 /**
  * O uso de VÁRIAS licenças, em UMA consulta.
  *
- * Em lote e não por linha pelo mesmo motivo do `contarFora` do estoque: a
+ * Em lote e não por linha pelo mesmo motivo do `contarUso` do estoque: a
  * listagem mostra até 100 licenças, e uma consulta por linha seria N+1 para
  * pintar a coluna principal da tela.
  */

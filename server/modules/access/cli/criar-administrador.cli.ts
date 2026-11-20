@@ -39,9 +39,6 @@ const comandoSchema = createUserSchema.extend({ password: senhaNova });
 //
 // USO:
 //   bun run acesso:administrador --nome "Maria Silva" --email "maria.silva@empresa.com" --senha "uma senha qualquer"
-//
-// O `--` depois do nome do script é do npm: sem ele, o npm toma `--nome`,
-// `--email` e `--senha` como opções dele e só repassa os valores, sem os nomes.
 // ═════════════════════════════════════════════════════════════════════════════
 
 const logger = createLogger('cli:acesso');
@@ -65,8 +62,8 @@ export async function criarAdministrador(dados: { nome: string; email: string; s
   const entrada = comandoSchema.safeParse({ name: dados.nome, email: dados.email, password: dados.senha });
   if (!entrada.success) throw new Error(formatZodError(entrada.error));
 
-  // `role` explícito, e não o `@default` da coluna: se a separação de cargos
-  // vier, o padrão pode deixar de ser Administrador, e este comando não.
+  // `role` explícito, e não o `@default` da coluna: com a separação de cargos
+  // (AV), o padrão deixou de ser Administrador, e este comando não.
   //
   // SEM SESSÃO: quem roda está no servidor, não no painel. A auditoria leva o
   // usuário do sistema operacional na origem (AB).

@@ -110,6 +110,8 @@ do navegador — não vale furá-la por uma lista de strings. A divergência ent
 
 > **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
 
+> **Corrige:** [D66](#d66--responsável-resolvido-é-uma-view-não-coluna-nem-cache) (a view do responsável).
+
 `deletedAt IS NULL` dentro da view; `userId` nulo não vira linha; `via` é
 `DIRETO`/`POSTO`/`ATIVO`. **Descartado:** corrigir no consumidor — seriam três
 relatórios lembrando do mesmo filtro, e o quarto esqueceria. A equivalência com
@@ -120,6 +122,8 @@ relatórios lembrando do mesmo filtro, e o quarto esqueceria. A equivalência co
 ## D130 — Posto vago continua saindo do `POSTO_VAGO`
 
 > **Superada por [O](./escopo.md#o--o-segundo-de-escopo-o-que-a-primeira-rodada-manteve-ou-não-enxergou-sai):** o segundo de-escopo: a régua do D143, aplicada sem a folga da primeira rodada.
+
+> **Corrige:** [D16](./posse.md#d16--responsabilidade-é-derivada-nunca-coluna) (a responsabilidade derivada: uma implementação por pergunta).
 
 A view não responde essa pergunta (o `JOIN` a elimina) e já há duas
 implementações revisadas. **Descartado:** uma quarta perna com `LEFT JOIN` só para

@@ -6,14 +6,14 @@ import { LOGIN_RATE_LIMIT } from '../../infra/http/write-rate-limit';
 
 const logger = createLogger('auth.maestro');
 
-// Login, logout e "quem sou eu". A senha de cada pessoa é definida no cadastro
-// e na edição do usuário (`user.maestro.ts`), que reaproveitam o
-// `verificarOrigem` daqui.
+// Login, logout e "quem sou eu". A senha temporária de cada pessoa sai do
+// cadastro e da senha temporária do usuário (`user.maestro.ts`), que
+// reaproveitam o `verificarOrigem` daqui.
 /**
  * O que TODA rota de credencial ganha a mais, num lugar só.
  *
  * - `bodyLimit` de 8 KiB: o teto global do Fastify é 1 MiB, e o login é a única
- *   rota que um anônimo alcança. Sem limite próprio, qualquer um empurra 1 MiB
+ *   rota de `/api` que um anônimo alcança em produção. Sem limite próprio, qualquer um empurra 1 MiB
  *   por requisição e o servidor gasta parse antes de descobrir que a senha está
  *   errada. Nenhum corpo legítimo daqui passa de algumas centenas de bytes.
  * - `verificarOrigem`: segunda camada anti-CSRF atrás do `SameSite` do cookie.
@@ -25,7 +25,7 @@ const ROTA_DE_CREDENCIAL: RouteShorthandOptions = {
 
 export class AuthMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
-    // A ÚNICA rota pública da API (ver o `ROTAS_PUBLICAS` do app.ts): é assim que a
+    // A ÚNICA rota pública da API em produção; fora dela, o Swagger também é (ver o `ROTAS_PUBLICAS` do app.ts): é assim que a
     // sessão nasce.
     server.post('/api/auth/login', { ...ROTA_DE_CREDENCIAL, ...LOGIN_RATE_LIMIT }, authController.login);
 

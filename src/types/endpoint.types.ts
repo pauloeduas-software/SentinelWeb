@@ -13,7 +13,7 @@ import type { Telemetry } from './telemetry.types';
 type AgentStatus = 'ONLINE' | 'OFFLINE';
 
 /**
- * Máquina descoberta pelo Agente Sentinel, como a lista de `/agentes` a lê —
+ * A máquina que o SentinelAgente apresenta, como a lista de `/agentes` a lê —
  * `GET /api/endpoints`. A API devolve só estes campos (DA).
  */
 export interface Endpoint {

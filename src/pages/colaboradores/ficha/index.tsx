@@ -30,7 +30,7 @@ import { usePode } from '../../../stores/auth.store';
 // POSTOS que ela ocupa, o estoque e as licenças no nome dela, e o HISTÓRICO
 // (docs/referencia/modelo-de-posse.md). Abre da página Colaboradores. São as
 // quatro coisas que a desativação e a exclusão cobram, cada uma com o link
-// para onde ela se devolve ou se encerra.
+// para onde ela se devolve ou se registra a saída.
 //
 // Os postos aparecem inclusive quando não têm ativo nenhum entregue: é uma
 // ocupação aberta, e é ela que a desativação cobra.
@@ -39,7 +39,7 @@ import { usePode } from '../../../stores/auth.store';
 // uma aba para cada coisa que está com ela e, por último, o histórico: as abas dizem o
 // que ESTÁ, o histórico diz o que FOI. Um ativo devolvido mês passado não aparece nas de
 // cima, e é ele que responde "já teve um notebook antes?". Cada linha abre o registro,
-// onde mora o Devolver ou o Encerrar.
+// onde mora o Devolver ou o Registrar saída.
 //
 // Aberta da Lixeira, pelo Supervisor, a ficha é só consulta, e as ações são Restaurar e
 // Excluir de vez (CF, DL).

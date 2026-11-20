@@ -14,7 +14,7 @@ import { usePermissoes } from '../stores/auth.store';
 //
 // Fica em `src/components` porque é interface compartilhada entre as páginas e
 // não pertence a domínio nenhum — mesmo lugar do `AppHeader`. A LISTA de itens
-// mora em `navegacao.ts`, separada daqui: o cabeçalho também a lê, para
+// mora em `navegacao.ts`, separada daqui: a aba do navegador também a lê, para
 // descobrir o nome da tela atual, e duas cópias divergiriam no primeiro item
 // acrescentado.
 //

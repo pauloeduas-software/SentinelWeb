@@ -443,8 +443,8 @@ test('a Máquina é a mesma no posto e no computador, e a linha dela abre a fich
   // A máquina nasce do handshake do agente, que o navegador não faz: vai direto ao banco.
   await prisma.endpoint.create({
     data: {
-      hwid: `hw-${ativo}`, hostname, osVersion: 'Windows 11', status: 'OFFLINE', assetId: ativo,
-      cpuModel: 'Intel Core i5-1235U', localIp: '10.0.0.15', macAddress: '00:1A:2B:3C:4D:5E',
+      hwid: `hw-${ativo}`, hostname, osVersion: 'Ubuntu 24.04', status: 'OFFLINE', assetId: ativo,
+      cpuModel: '12th Gen Intel(R) Core(TM) i5-1235U', localIp: '10.0.0.15', macAddress: '00:1a:2b:3c:4d:5e',
       manufacturer: 'Dell Inc.', hardwareModel: 'OptiPlex 7080', biosSerial: 'SN-E2E-0001',
       gpus: [{ Name: 'UHD Graphics 630', MemoryBytes: null }],
     },
@@ -454,10 +454,10 @@ test('a Máquina é a mesma no posto e no computador, e a linha dela abre a fich
     ['Fabricante', 'Dell Inc.'],
     ['Modelo', 'OptiPlex 7080'],
     ['Série', 'SN-E2E-0001'],
-    ['Sistema operacional', 'Windows 11'],
-    ['Processador', 'Intel Core i5-1235U'],
+    ['Sistema operacional', 'Ubuntu 24.04'],
+    ['Processador', '12th Gen Intel(R) Core(TM) i5-1235U'],
     ['Endereço IP', '10.0.0.15'],
-    ['Endereço MAC', '00:1A:2B:3C:4D:5E'],
+    ['Endereço MAC', '00:1a:2b:3c:4d:5e'],
   ];
 
   for (const caminho of [`/postos/${posto}?aba=maquina`, `/computadores/${ativo}?aba=maquina`]) {

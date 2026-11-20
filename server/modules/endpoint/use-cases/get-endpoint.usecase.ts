@@ -15,9 +15,9 @@ import { lerParque } from '../../reconciliation/use-cases/auto-link-endpoint.use
  * A telemetria existia em um lugar só — `GET /api/endpoints`, a frota inteira em
  * uma resposta, consultada a cada poucos segundos. Isso servia a uma tela que mostrava
  * a frota em cards. Ela saiu: a telemetria agora aparece onde a máquina tem nome,
- * que é a ficha do ATIVO (aba Máquina) e a do POSTO.
+ * que é a ficha da MÁQUINA, a do ATIVO (aba Máquina) e a do POSTO.
  *
- * Nessas duas telas a pergunta é sobre UMA máquina, e responder a ela com a
+ * Nessas três telas a pergunta é sobre UMA máquina, e responder a ela com a
  * listagem é pior do que parece. O `take: 1` do `include` NÃO vira `LIMIT` no
  * SQL quando há mais de um pai: o Prisma empurra o limite para o banco só no
  * caso de um pai só, e no plural emite uma consulta `endpointId IN (…)` SEM
@@ -28,7 +28,7 @@ import { lerParque } from '../../reconciliation/use-cases/auto-link-endpoint.use
  * que ela é barata.
  *
  * A listagem FICA, e não é redundante: é dela que `/agentes` tira as máquinas
- * sem cadastro. Ela responde "o que o agente vê que o cadastro não sabe"; esta
+ * das três vistas. Ela responde "que máquinas o agente vê"; esta
  * responde "como está esta máquina".
  * ═══════════════════════════════════════════════════════════════════════════
  */

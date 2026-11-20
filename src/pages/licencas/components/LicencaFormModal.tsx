@@ -24,11 +24,11 @@ import type { LinhaDeChave } from '../helpers/licenca.helper';
 // que traz as chaves de produto (a listagem não as devolve). E da busca FEITA
 // NESTA ABERTURA, não do cache: o detalhe guardado de uma visita anterior pode
 // ser de antes de um Encerrar ou da edição de outra pessoa, e o formulário
-// inteiro o gravaria de volta — reabrindo a licença sem ninguém pedir.
+// levaria essa versão velha — o servidor responderia 409 a quem nem viu a mudança.
 //
 // NA EDIÇÃO, O FORMULÁRIO INTEIRO VAI AO SERVIDOR, como nas Configurações (AF).
-// O preço, declarado: o formulário aberto há tempo desfaz a edição que outra
-// pessoa salvou no meio. O servidor continua barrando o que quebra regra.
+// O formulário aberto há tempo não desfaz a edição que outra pessoa salvou no
+// meio: leva a versão lida, e o servidor responde 409. O servidor continua barrando o que quebra regra.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function limpar(valor: string): string | null {
@@ -189,7 +189,7 @@ function Formulario({ licenca, onClose, onSubmit }: Omit<LicencaFormModalProps, 
           <Input required value={name} onChange={(e) => setName(e.target.value)} />
         </Campo>
 
-        {/* Filtrada por TIPO: o seletor não oferece categoria de ativo, porque o
+        {/* Filtrada por TIPO: o seletor não oferece categoria de computador, porque o
             servidor a recusaria com 422. */}
         <Campo rotulo="Categoria" obrigatorio>
           <ReferenceSelect rota="categories" filtroTipo="LICENSE" valor={categoryId} obrigatorio atual={licenca?.category} onChange={setCategoryId} />

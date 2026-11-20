@@ -65,7 +65,7 @@ async function usoDasChaves(
 
 /**
  * As chaves da licença, na ordem em que foram digitadas, com o uso de cada uma.
- * É a única leitura que devolve o texto: a do detalhe.
+ * Com a lista de entregas, é a única leitura que devolve o texto: a do detalhe.
  */
 export async function listarChaves(client: ClienteLicenca, licenseId: string): Promise<ChaveNaResposta[]> {
   const [chaves, uso] = await Promise.all([

@@ -3,17 +3,16 @@ import { origemPermitida } from '../../../infra/config/cors';
 import { AppError } from '../../../infra/errors/app-error';
 
 // O que as rotas de credencial ganham a mais que o resto da API: a checagem de
-// origem, aplicada só em `/api/auth/*` e no cadastro e edição de usuário, que
-// recebem senha. Não virou middleware global porque exigir `Origin` em toda rota
+// origem, aplicada só em `/api/auth/*` e no cadastro, na edição e na senha
+// temporária do usuário, que mexem em credencial. Não virou middleware global porque exigir `Origin` em toda rota
 // quebraria o agente e qualquer integração que não seja navegador. O `no-store`,
 // que morava aqui, vale para a API inteira (`infra/http/sem-cache.ts`).
 
 /**
  * A SEGUNDA camada anti-CSRF, atrás do `SameSite` do cookie.
  *
- * Por que uma segunda: o cookie de sessão é `SameSite=Lax` e não `Strict` — em
- * desenvolvimento o painel roda na 3000 e a API na 3001, e `Strict` faria o
- * navegador simplesmente não mandar o cookie (ver session-cookie.helper.ts).
+ * Por que uma segunda: o cookie de sessão é `SameSite=Lax` e não `Strict` (ver
+ * session-cookie.helper.ts).
  * `Lax` já barra o POST vindo de outro site, então o buraco real é pequeno; o
  * que esta checagem acrescenta é não depender de UMA única linha de defesa
  * escrita num atributo de cookie que um ajuste futuro pode afrouxar sem que

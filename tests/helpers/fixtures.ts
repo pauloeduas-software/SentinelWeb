@@ -69,10 +69,10 @@ export async function motivoDaBaixa(name = 'Vendido'): Promise<string> {
  * Um item de estoque, pela API — nunca por `prisma.stockItem.create`.
  *
  * O motivo é o do topo deste arquivo: criar pelo Prisma pularia o zod da borda,
- * a guarda de tipo da categoria, a ENTRADA inicial e o `AuditLog`, e o teste
+ * a guarda de tipo da categoria e o `AuditLog`, e o teste
  * passaria a provar coisas sobre um item que nenhum usuário consegue cadastrar.
  *
- * O NOME é único entre os vivos, então quem chama passa um nome próprio por
+ * O NOME é único entre todos, então quem chama passa um nome próprio por
  * caso.
  */
 export async function criarItemDeEstoque(
@@ -210,10 +210,10 @@ export async function criarAtivo(
  * ═════════════════════════════════════════════════════════════════════════════
  * O `sufixo` E POR QUE O PADRÃO DELE É VAZIO.
  *
- * `Manufacturer.name` e `Workstation.name` são `@unique`, e `Person.email` tem índice
- * único parcial. Chamar esta função DUAS vezes no mesmo arquivo colide nos três —
- * 409 "Registro já existe." vindo de dentro do fixture, que se lê como defeito da
- * aplicação e não do teste.
+ * `Manufacturer.name`, `Workstation.name` e `Location.name` são `@unique`, e
+ * `Person.email` tem índice único parcial. Chamar esta função DUAS vezes no
+ * mesmo arquivo colide nos quatro — 409 vindo de dentro do fixture, que se lê
+ * como defeito da aplicação e não do teste.
  *
  * O padrão fica VAZIO de propósito: há testes que dependem dos nomes LITERAIS
  * que ela produz — `invariantes/posse.test.ts` compara

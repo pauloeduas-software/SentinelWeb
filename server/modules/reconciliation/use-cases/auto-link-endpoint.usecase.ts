@@ -57,7 +57,8 @@ export async function vincularPelaSerie(endpointId: string): Promise<boolean> {
       where: { id: endpointId },
       select: { ...MAQUINA_DO_PARQUE_SELECT, assetId: true },
     });
-    // As saídas baratas antes de ler o parque: o handshake passa aqui a cada conexão.
+    // As saídas baratas antes de ler o parque: o handshake passa aqui a cada conexão,
+    // uma vez por dia e a cada Atualizar agora.
     if (!maquina || maquina.assetId || maquina.autoLinkOff || !normalizeSerial(maquina.biosSerial)) return false;
 
     const { ativos, repetidas } = await lerParque();

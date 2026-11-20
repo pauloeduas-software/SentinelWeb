@@ -53,8 +53,8 @@ export const workstationSpec: CatalogSpec = {
     return ativos + estoque + ocupacoes;
   },
 
-  // A RECUSA DIZ O QUÊ, como a do colaborador: "tem 1 ativo, 3 unidades de
-  // estoque (Mouse USB ×2 e Teclado) e 1 ocupante", e o computador e os itens como
+  // A RECUSA DIZ O QUÊ, como a do colaborador: "tem 1 computador, 3 unidades de
+  // estoque (Mouse USB ×2 e Teclado) e 1 responsável", e o computador e os itens como
   // `refs` — o Devolver mora na ficha deles (BN), e a notificação leva até lá.
   //
   // TRAVA O POSTO ANTES DE CONTAR, `FOR UPDATE`. A entrega ao posto e a

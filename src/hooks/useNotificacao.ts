@@ -23,7 +23,7 @@ import { create } from 'zustand';
 
 export type TipoNotificacao = 'erro' | 'aviso' | 'info' | 'sucesso';
 
-/** Um link no cartão — a licença que a recusa manda devolver. */
+/** Um link no cartão — o registro que a recusa cita. */
 export interface LinkDaNotificacao {
   rotulo: string;
   para: string;

@@ -11,7 +11,7 @@ import type { EntregaNaFicha } from './stock.types';
  *
  * DESATIVAR NÃO É EXCLUIR. Quem saiu da empresa continua no cadastro, com o
  * histórico de posse apontando para ele; excluir é para cadastro criado errado,
- * e o servidor só deixa quando não há histórico nenhum.
+ * e o servidor só deixa quando nada está com ele agora.
  */
 export interface PessoaDaFicha {
   id: string;

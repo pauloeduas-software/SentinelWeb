@@ -9,7 +9,7 @@ import type { Cargo, User } from './user.types';
  * é deliberada: no servidor ele fica FORA daquela allowlist, porque o que a
  * pessoa PODE não é dado dela.
  *
- * Então "a sessão" e "um colaborador da listagem" não têm os mesmos campos, e é
+ * Então "a sessão" e "um usuário da listagem" não têm os mesmos campos, e é
  * esse o motivo de os dois tipos existirem separados.
  *
  * O que NÃO existe aqui, e nunca vai existir: token. Ele viaja em cookie
@@ -19,7 +19,7 @@ export type SessionUser = Omit<User, 'role' | 'isActive'> & {
   /**
    * O CARGO desta pessoa (D148): Técnico, Supervisor ou Administrador (AV).
    *
-   * Na sessão VEM SÓ DE DUAS ROTAS, `POST /api/auth/login` e `GET /api/auth/me`:
+   * Na sessão VEM SÓ DAS ROTAS DA SESSÃO, `POST /api/auth/login`, `GET` e `PATCH /api/auth/me` e `PUT /api/auth/password`:
    * no servidor ele não está no `USER_PUBLIC_SELECT` de propósito, e sai na
    * mesma consulta que relê a sessão.
    *

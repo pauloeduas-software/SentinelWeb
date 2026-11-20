@@ -74,7 +74,7 @@ export function itensComoReferencias(itens: readonly ItemComAlguem[]): Referenci
 export async function componentesDoAtivo(
   client: ClienteEstoque,
   assetId: string,
-  /** Quem a frase cita: a etiqueta, ou "Este ativo". */
+  /** Quem a frase cita: a etiqueta, ou "Este computador". */
   sujeito: string,
   /** "dar baixa", "excluir". */
   operacao: string,

@@ -7,7 +7,7 @@ import { useNotificacao } from './useNotificacao';
 //
 // Hook COMPARTILHADO, em `src/hooks`, pelo mesmo motivo do `useOcupantes`: as
 // três telas que mostram uma máquina fazem a mesma coisa com ela, e cópias
-// divergiriam no primeiro ajuste. A aba Máquina do ativo pergunta "como está o
+// divergiriam no primeiro ajuste. A aba Máquina do computador pergunta "como está o
 // equipamento desta ficha"; a ficha do posto, "como está o computador deste
 // posto"; a da máquina, "como ela está agora" — e a resposta é a mesma consulta.
 //

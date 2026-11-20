@@ -13,7 +13,7 @@ import { statusDaUrl } from '../helpers/licenca.helper';
 import { useAcoesDaLicenca } from './useAcoesDaLicenca';
 
 // Estado da tela de Licenças: página, busca e filtros, na URL (`useListaNaUrl`). Uma
-// lista só, com a encerrada junto, como no cadastro das Configurações (AF). A linha
+// lista só, com a encerrada junto, como o desativado no Estoque (AF). A linha
 // abre a ficha, e as ações do `⋯` são as dela (`useAcoesDaLicenca`).
 export function useLicencas() {
   const notificar = useNotificacao();

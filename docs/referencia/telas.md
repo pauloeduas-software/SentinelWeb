@@ -47,8 +47,8 @@ Cadastro novo copia `src/components/catalogo/` (`CatalogTable` + `useCatalog`), 
 
 - **O CRUD é um só.** A linha inteira abre o registro (a ficha ou, no cadastro sem ficha, o Editar). Editar,
   Desativar/Ativar e Excluir, nessa ordem, no `⋯` (AY).
-- **Na Lixeira, a linha abre a ficha só para consulta (BW, CF).** O `AvisoDaLixeira` fica entre o card e as abas, e a
-  única ação é Restaurar, no card.
+- **Na Lixeira, a linha abre a ficha só para consulta (BW, CF).** O `AvisoDaLixeira` fica entre o card e as abas, e as
+  ações são Restaurar, no card, e Excluir de vez, no `⋯` (DL).
 - **Excluir sempre clica, e quem recusa é o 409.** A exceção é a própria conta, em Usuários: ali
   Excluir e Desativar ficam desligados, porque ninguém age sobre si mesmo. E o computador baixado
   não tem Excluir, como não tem Entregar: ele não vai para a lixeira ([CL](../decisoes/catalogo-e-ativo.md#cl--o-baixado-não-vai-para-a-lixeira-e-a-máquina-sai-antes-da-baixa-e-da-lixeira)).

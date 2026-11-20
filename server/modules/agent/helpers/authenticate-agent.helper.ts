@@ -2,11 +2,11 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { prisma } from '../../../infra/database/prismaClient';
 import { getAgentEnrollSecret } from '../../../infra/config/env';
 
-// Autenticação do Agente Sentinel (CR). Dois segredos, cada um numa porta:
+// Autenticação do SentinelAgente (CR). Dois segredos, cada um numa porta:
 //
 //   o SEGREDO DE INSTALAÇÃO (`AGENT_ENROLL_SECRET`), um só para a frota, vale
 //   só em `POST /agent-hub/enroll`. Quem instala o agente o entrega, e o agente o
-//   apaga depois de usar.
+//   apaga quando o cadastro dá certo.
 //
 //   o TOKEN DA MÁQUINA, que o cadastro devolve, é o único que o `/agent-hub`
 //   aceita. Ele diz QUAL máquina está do outro lado: a conexão fica presa ao HWID

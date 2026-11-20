@@ -49,7 +49,7 @@ interface AuthState {
 /**
  * Tudo que a sessão anterior trouxe da API sai da memória junto com ela.
  *
- * Sem isto, o próximo login mostraria por alguns instantes a lista de ativos
+ * Sem isto, o próximo login mostraria por alguns instantes a lista de computadores
  * de quem estava logado antes — dado de outra pessoa na tela de uma nova, que
  * é o tipo de vazamento que ninguém reporta como bug de segurança.
  */
@@ -70,8 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   entrar: async (credenciais) => {
     // O erro PROPAGA de propósito: é um clique do usuário, e a tela precisa
     // mostrar "e-mail ou senha inválidos" ou "conta bloqueada". Quem trata é o
-    // `hooks/useLogin.ts` da página (docs/referencia/arquitetura.md: busca engole erro,
-    // mutação propaga).
+    // `hooks/useLogin.ts` da página (docs/referencia/arquitetura.md: o erro aparece,
+    // nunca vira vazio).
     const usuario = await loginRequest(credenciais);
     limparCacheDoServidor();
     set({ usuario, verificando: false, saiu: false });

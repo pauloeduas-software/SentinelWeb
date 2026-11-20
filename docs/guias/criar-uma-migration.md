@@ -53,7 +53,7 @@ destrói dado ou não executa:
 
 - um `DROP INDEX` que o Postgres recusa quando o índice sustenta uma CONSTRAINT;
 - um `DROP TABLE` + `CREATE TABLE` para o que era um **rename** de model, o que
-  teria apagado a frota inteira descoberta pelo agente.
+  teria apagado todas as máquinas dos agentes.
 
 **4. Aplicar e gerar o client.**
 

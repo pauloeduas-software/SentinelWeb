@@ -7,15 +7,15 @@ const logger = createLogger('asset.maestro');
 
 // O ativo do ITAM — o `Asset` do vocabulário do Snipe-IT.
 //
-// A máquina descoberta pelo agente é o `Endpoint`, em /api/endpoints: são duas
+// A máquina que o agente apresenta é o `Endpoint`, em /api/endpoints: são duas
 // coisas diferentes de propósito, porque há ativo sem agente (monitor, cadeira,
 // cabo) e máquina vista pelo agente que ninguém cadastrou.
 export class AssetMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/assets', assetController.list);
     server.get('/api/assets/stats', assetController.stats);
-    // Lista enxuta para os seletores que escolhem um ativo: a licença entregue
-    // a uma máquina e o vínculo de `/agentes` (`?maquina=sem`).
+    // Lista enxuta para os seletores que escolhem um ativo: a licença e o
+    // componente entregues a uma máquina e o vínculo de `/agentes` (`?maquina=sem`).
     server.get('/api/assets/options', assetController.options);
 
     // A leitura unitária vem DEPOIS das rotas de caminho fixo (`/stats`,
@@ -27,7 +27,7 @@ export class AssetMaestro {
     // colada no navegador não tem a linha que a listagem tinha em memória.
     server.get('/api/assets/:id', assetController.byId);
 
-    // A aba Histórico: as entregas e as licenças do ativo, do mais recente
+    // A aba Histórico: as entregas, as licenças e os componentes do ativo, do mais recente
     // para o mais antigo. Só movimentação: a auditoria fica no banco (AB). NÃO
     // existe tabela `AssetLog` (D18).
     server.get('/api/assets/:id/history', assetController.history);

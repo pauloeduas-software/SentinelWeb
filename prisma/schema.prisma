@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// A máquina descoberta pelo Agente Sentinel — o lado RMM.
+// A máquina que o SentinelAgente apresenta — o lado RMM.
 //
 // Chamava-se `Asset`. O nome foi liberado para o ativo do ITAM, que
 // é o `Asset` do vocabulário do Snipe-IT. Aqui nenhuma coluna pode voltar a se
@@ -38,8 +38,8 @@ model Endpoint {
   macAddress String?
 
   // ── IDENTIDADE COLETADA ──────────────────────────────────────────────────
-  // Tudo nulável: o agente vive fora deste repositório e o rollout leva
-  // semanas. Máquina que não manda serial não se liga sozinha — não vira erro.
+  // Tudo nulável: o valor de fábrica não vem, e a máquina sem DMI (VM, ARM) não
+  // tem o que mandar. Máquina que não manda serial não se liga sozinha — não vira erro.
   biosSerial    String?
   systemUuid    String?
   // O fabricante e o modelo como a própria máquina se declara: a aba Máquina os
@@ -159,7 +159,7 @@ model User {
   // O buraco que isto fecha: a releitura por requisição
   // (`current-user.usecase.ts`) mata a sessão de quem foi apagado ou desativado,
   // mas NÃO a de quem continua sendo um usuário válido. Então quem roubasse o
-  // cookie seguia operando por até 8 horas mesmo DEPOIS de a vítima trocar a
+  // cookie seguia operando até a sessão expirar, 48 horas, mesmo DEPOIS de a vítima trocar a
   // senha — que é justamente o que a vítima faz ao desconfiar.
   //
   // O número vai assinado dentro do JWT e é conferido contra esta coluna a cada
@@ -193,7 +193,7 @@ model User {
 
 // O COLABORADOR — quem RECEBE equipamento. Não entra no sistema.
 //
-// Uma tabela de catálogo (a sexta aba de Configurações) e a ÚNICA dele com
+// Uma tabela de catálogo (a sétima, com página própria) e a ÚNICA dele com
 // lixeira: o colaborador tem histórico de posse PRÓPRIO — "o que já esteve com a
 // Laura" —, e recadastrá-lo depois de excluir o partiria em dois. Excluir manda
 // para a lixeira, e só recusa quem responde por algo AGORA (invariante 6). Da
@@ -260,9 +260,9 @@ enum AuditActorType {
 // A AUDITORIA — quem fez o quê, em qual registro, e quando (AB).
 //
 // O AUTOR fica só no banco: tela nenhuma o mostra — as abas de histórico do
-// ativo e do colaborador leem o que mudou, nunca quem. Ele existe para o
-// administrador responder, com o banco na mão, se um erro foi do sistema ou de
-// uma conta.
+// ativo e do colaborador leem a movimentação, nunca a auditoria. Ele existe
+// para o administrador responder, com o banco na mão, se um erro foi do sistema
+// ou de uma conta.
 //
 // SEM FK NENHUMA, de propósito: excluir o ativo, a licença ou a conta não pode
 // levar junto a linha que diz quem os excluiu. Por isso o autor e o registro vão
@@ -277,7 +277,7 @@ enum AuditActorType {
 model AuditLog {
   id          String  @id @default(uuid()) @db.Uuid
   entityType  String
-  /// Nulo na configuração da descoberta e na rodada de reconciliação.
+  /// Nulo só em `AppSetting` e `Reconciliation` (`audit_logs_registro_com_id`), que nada grava hoje.
   entityId    String? @db.Uuid
   /// O registro por escrito: a etiqueta do ativo, o nome do item, do posto.
   entityLabel String
@@ -290,7 +290,7 @@ model AuditLog {
   actorId    String?        @db.Uuid
   actorName  String?
   actorEmail String?
-  /// De onde veio: 'painel', 'job:reconciliacao', 'cli:conceder-administrador:<usuário do SO>'.
+  /// De onde veio: 'painel', 'vinculo-automatico', 'agent:reinstalacao', 'cli:criar-administrador:<usuário do SO>'.
   source     String
   /// O `X-Request-Id` da requisição — o mesmo do log do servidor. Nulo no SYSTEM.
   requestId  String?
@@ -507,7 +507,7 @@ model Location {
 // O posto FICA numa localização (`locationId`, obrigatória), e é só isso que
 // os liga: o ativo continua com UM campo de "onde" (`Asset.locationId`).
 //
-// A regra de cadastro é a do status: nome único, desativar em vez de excluir,
+// A regra de cadastro é a do status: nome único,
 // e a exclusão recusada só pelo que está nele AGORA — entrega de ativo ou de estoque aberta,
 // ocupante atual (`workstationSpec`). O passado não segura: as linhas já
 // fechadas guardam o nome por escrito.
@@ -600,7 +600,7 @@ model Asset {
   retiredAt       DateTime?
   retiredReasonId String?   @db.Uuid
   // A observação da baixa, enquanto ela vale: a ficha a mostra ao lado
-  // do motivo, e desfazer a baixa a limpa junto. A de cada baixa passada fica na
+  // do motivo, e reverter a baixa a limpa junto. A de cada baixa passada fica na
   // auditoria (AB), que a tela não lê.
   retiredNotes    String?
 
@@ -611,7 +611,7 @@ model Asset {
   status        StatusLabel   @relation(fields: [statusId], references: [id], onDelete: Restrict)
   model         AssetModel    @relation(fields: [modelId], references: [id], onDelete: Restrict)
   // Restrict, como o status: a localização com ativo guardado — lixeira
-  // inclusive — é "em uso" e se desativa, não se exclui (`locationSpec`).
+  // inclusive — é "em uso" e não se exclui (`locationSpec`).
   location      Location?     @relation(fields: [locationId], references: [id], onDelete: Restrict)
   retiredReason RetireReason? @relation(fields: [retiredReasonId], references: [id], onDelete: Restrict)
 
@@ -979,7 +979,7 @@ model StockItem {
   name String @unique
 
   // QUANTO EXISTE — não quanto sobra. Ao menos 1 no cadastro; depois chega a 0
-  // quando acaba (AJ): a unidade que recebeu baixa ou foi consumida sai daqui
+  // quando acaba (AJ): a unidade consumida, ou tirada pelo Editar, sai daqui
   // (CHECK `stock_items_qty_nao_negativa`). Reduzir não passa do que está
   // em uso (`update-stock-item`).
   qty Int
@@ -1001,8 +1001,8 @@ model StockItem {
 
   // Restrict: é o 409 por uso do catálogo, e a FK é a rede embaixo dele.
   category  Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  // Restrict, como a categoria: o local que guarda estoque é "em uso" e se
-  // desativa, não se exclui (`locationSpec.countUsages`).
+  // Restrict, como a categoria: o local que guarda estoque é "em uso" e
+  // não se exclui (`locationSpec.countUsages`).
   location  Location?       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   movements StockMovement[]
 

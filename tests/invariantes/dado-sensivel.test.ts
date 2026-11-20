@@ -18,10 +18,9 @@ import { criarFabricante, criarModelo, idsDoSeed } from '../helpers/fixtures';
 // errada (ler e apagar antes de responder), que é exatamente a que o D77
 // descartou.
 //
-// COM UM CARGO SÓ (Z), os casos aqui são os que se provam com o ADMIN: a busca
-// e as escritas, que não trazem o custo para cargo nenhum, e o ADMIN vendo o
-// custo onde ele aparece. Não há sessão abaixo de ADMIN para provar o outro
-// lado.
+// Os casos aqui são os que se provam com o ADMIN: as escritas, que não trazem
+// o custo para cargo nenhum, e o ADMIN vendo o custo onde ele aparece. O outro
+// lado, o Técnico sem o custo, está em `permissao.test.ts` (AV).
 // ═════════════════════════════════════════════════════════════════════════════
 
 let api: ApiDeTeste;
@@ -50,9 +49,9 @@ beforeAll(async () => {
 
 afterAll(async () => { await api.fechar(); });
 
-describe('custo de compra — `ADMIN` (D148), hoje o único cargo (Z)', () => {
+describe('custo de compra — `ADMIN` (D148)', () => {
   it('quem É ADMIN continua vendo o custo', async () => {
-    // A metade do teste de permissão que sobra com um cargo só: provar que o
+    // A metade do teste de permissão que fica aqui: provar que o
     // cargo ABRE é o que impede uma implementação que esconde de todos.
     const resposta = await api.get<Record<string, unknown>>(`/api/assets/${assetId}`);
 
@@ -77,7 +76,7 @@ describe('custo de compra — `ADMIN` (D148), hoje o único cargo (Z)', () => {
   });
 
   it('as respostas de ESCRITA não trazem o custo, para cargo nenhum', async () => {
-    // A QUINTA PORTA: criar, editar, entregar, devolver, dar baixa e restaurar
+    // A SEGUNDA PORTA: criar, editar, entregar, devolver, dar baixa e restaurar
     // respondem com o ativo atualizado (`ASSET_WRITE_SELECT`).
     const resposta = await api.put<Record<string, unknown>>(`/api/assets/${assetId}`, { notes: 'do admin' });
     expect(resposta.status).toBe(200);

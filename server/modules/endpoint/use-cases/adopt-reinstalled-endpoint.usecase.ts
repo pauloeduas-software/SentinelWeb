@@ -49,8 +49,8 @@ interface IdentidadeDoHandshake {
  * Se este HWID nunca foi visto e o firmware dele é o de uma máquina conhecida
  * e desligada, troca o `hwid` daquela linha por este. Devolve se trocou.
  *
- * Roda antes do `upsert` do handshake: com a linha renomeada, o `upsert` cai no
- * `update`, e o "antes" que a mudança de hardware compara é o da máquina antiga.
+ * Roda no lugar do `upsert` do handshake: com a linha renomeada, o `update` que
+ * vem depois a atualiza, com o vínculo e a telemetria dela.
  */
 export async function herdarMaquinaReinstalada(identidade: IdentidadeDoHandshake): Promise<boolean> {
   const serial = normalizeSerial(identidade.biosSerial);

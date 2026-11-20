@@ -73,11 +73,14 @@ que habilita os comandos para a conexão.
 - **O valor de fábrica:** o campo não vem, e o servidor o lê como ausente. O servidor ainda confere a série
   contra a lista de valores de fábrica (`normalize-identity.helper.ts`,
   [CT](../decisoes/reconciliacao.md#ct--o-lixo-de-fábrica-se-reconhece-sem-separadores-e-a-lista-cresce)).
+- **`Gpus: []`** apaga a lista gravada. O `MemoryBytes` que não vem, ou que não é número maior que zero, vira
+  nulo.
 - O IP é IPv4.
 
 ### `Telemetry`
 
-Chega quando a conexão sobe, de hora em hora e em resposta ao `REFRESH`. Grava uma linha em `telemetries`;
+Chega 10 s depois da primeira conexão desde que o agente subiu (no boot e a cada reinício do serviço), de
+hora em hora e em resposta ao `REFRESH`; a reconexão não manda amostra, e a próxima vem na hora seguinte. Grava uma linha em `telemetries`;
 o expurgo diário guarda só a última de cada máquina
 ([DA](../decisoes/reconciliacao.md#da--o-que-o-agente-manda-vai-para-a-aba-máquina-e-o-que-ninguém-lê-sai)).
 
@@ -93,7 +96,7 @@ o expurgo diário guarda só a última de cada máquina
 
 ### `Ping`
 
-Vai quando a conexão fica calada por um tempo sorteado entre 30 e 60 s. A máquina sem
+Vai quando o agente passa um tempo sorteado entre 30 e 60 s sem mandar nada. A máquina sem
 nenhuma mensagem há 2 minutos vira Desconectado (`OFFLINE`), e a que fecha a conexão vira na hora; a que
 fala é Conectado (`ONLINE`)
 ([CS](../decisoes/reconciliacao.md#cs--a-máquina-calada-vira-offline-em-2-minutos)).

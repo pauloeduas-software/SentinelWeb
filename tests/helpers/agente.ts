@@ -25,9 +25,10 @@ const AGENT_ENROLL_SECRET = process.env.AGENT_ENROLL_SECRET ?? '';
 
 export interface AgenteDeTeste {
   hwid: string;
-  /** Manda um Handshake e espera o servidor confirmar que processou. */
+  /** Manda um Handshake, sem esperar o servidor processar. */
   handshake(payload?: Record<string, unknown>): Promise<void>;
   telemetria(payload?: Record<string, unknown>): Promise<void>;
+  ping(): Promise<void>;
   /**
    * A próxima mensagem que o SERVIDOR mandou a este agente, já desserializada.
    *
@@ -150,9 +151,10 @@ export async function conectarAgente(api: ApiDeTeste, hwid: string): Promise<Age
     },
     handshake: (payload = {}) => mandar('Handshake', {
       Hostname: 'maquina-de-teste',
-      OsVersion: 'Windows 11 Pro',
+      OsVersion: 'Ubuntu 24.04',
       ...payload,
     }),
+    ping: () => mandar('Ping', {}),
     telemetria: (payload = {}) => mandar('Telemetry', {
       CpuUsagePercentage: 12.5,
       RamTotalBytes: 17179869184,

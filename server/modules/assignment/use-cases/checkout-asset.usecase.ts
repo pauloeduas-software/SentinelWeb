@@ -392,8 +392,8 @@ export async function checkoutAsset(assetId: string, data: CheckoutData, ator: A
       select: ASSET_WRITE_SELECT,
     });
 
-    // No histórico do ATIVO, não no da posse: é a linha do tempo do equipamento
-    // que alguém abre para perguntar "por onde isto andou".
+    // Na auditoria do ATIVO, não na da posse: é a linha do tempo do equipamento
+    // que alguém consulta para perguntar "por onde isto andou".
     // O alvo vai também POR ESCRITO: a pessoa ou o posto podem ser excluídos
     // depois, e o id sozinho deixaria de dizer a quem o ativo foi entregue.
     await recordAudit(

@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
 // na tela — e isso não gera erro nenhum, só um resultado errado em silêncio. O
 // esquecimento deixa de ser possível quando o filtro é do cliente, não da query.
 //
-// POR QUE FICA EM `core`: não sabe o que é um `Asset` nem um `User`. Ele
+// POR QUE FICA EM `infra`: não sabe o que é um `Asset` nem um `User`. Ele
 // pergunta ao DMMF do próprio Prisma quais models têm a coluna `deletedAt` e
 // aplica só neles — infraestrutura pura, sem conhecimento de negócio.
 
@@ -52,8 +52,8 @@ interface ArgsComWhere {
  * Existe com nome próprio porque `deletedAt: undefined` solto no meio de um
  * `where` parece código morto e é o oposto disso: quem o apagar por engano faz
  * a consulta voltar a ignorar a lixeira, em silêncio. É o caso do `countUsages`
- * do catálogo, onde ignorar a lixeira deixa o `onDelete: SetNull` apagar o
- * vínculo de um ativo apagado.
+ * do catálogo, onde ignorar a lixeira dá zero em uso, e a FK `Restrict` recusa
+ * com o P2003 genérico no lugar da frase que diz quantos.
  */
 export const INCLUINDO_LIXEIRA = { deletedAt: undefined } as const;
 

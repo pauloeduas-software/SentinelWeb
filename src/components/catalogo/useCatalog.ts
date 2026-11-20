@@ -25,7 +25,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
     [specs, chave],
   );
 
-  // A primeira aba é o endereço limpo. O que era da aba anterior fica para trás: "Ativo"
+  // A primeira aba é o endereço limpo. O que era da aba anterior fica para trás: "Computador"
   // nas categorias não quer dizer nada nos status.
   const changeTab = (proximo: string) => {
     const proxima = specs.find((item) => item.slug === proximo) ?? specs[0];
@@ -68,7 +68,7 @@ export function useCatalog(specs: readonly CatalogUiSpec[]) {
 
   // O REGISTRO NOVO NASCE NO RECORTE QUE ESTÁ NA TELA. Quem filtrou as
   // categorias por "Licença" e clicou em "Nova categoria" quer uma categoria de
-  // licença: abrir o formulário em "Ativo" (a primeira opção) fazia a pessoa
+  // licença: abrir o formulário em "Computador" (a primeira opção) fazia a pessoa
   // trocar o campo à mão — ou, não reparando, gravar no tipo errado e ver a
   // linha sumir do filtro que ela mesma tinha ligado.
   const padroesDoNovo = useMemo(

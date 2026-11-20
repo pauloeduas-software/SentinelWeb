@@ -17,8 +17,8 @@ const logger = createLogger('endpoint.handshake');
 export async function registerHandshake(data: HandshakeData): Promise<string | null> {
   // `?? undefined` na identidade, e não `?? null`: em Prisma, `undefined`
   // significa NÃO ESCREVA e `null` significa APAGUE. O serial que não veio
-  // neste handshake (a leitura do firmware falhou) não apaga o que já estava, e
-  // com ele o vínculo que a reconciliação já tinha resolvido. O fabricante, o
+  // neste handshake (o valor de fábrica, ou a máquina sem DMI) não apaga o que
+  // já estava, e com ele o vínculo que a reconciliação já tinha resolvido. O fabricante, o
   // modelo e as placas de vídeo seguem a mesma regra. A versão do agente, não: o
   // handshake sem ela é de um agente que não a manda, e a versão gravada mentiria.
   const inventory = {
@@ -37,7 +37,7 @@ export async function registerHandshake(data: HandshakeData): Promise<string | n
 
   // HWID NUNCA VISTO PODE SER UMA MÁQUINA CONHECIDA, REINSTALADA (CV): o HWID é
   // da instalação do agente, e o firmware diz se a máquina é outra. Herdando,
-  // a linha antiga passa a ter este HWID, e o `upsert` abaixo a atualiza.
+  // a linha antiga passa a ter este HWID, e o `update` abaixo a atualiza.
   //
   // A MÁQUINA EXCLUÍDA NO MEIO DO HANDSHAKE NÃO VOLTA (DD). A exclusão apaga a
   // linha e a credencial na mesma transação: sem a linha, a credencial se

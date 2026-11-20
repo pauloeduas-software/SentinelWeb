@@ -14,10 +14,10 @@ export const apiClient = axios.create({
   baseURL: API_BASE,
   timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
-  // A SESSÃO INTEIRA DEPENDE DESTA LINHA. O cookie de sessão é httpOnly
+  // COM FRONT E API EM ORIGENS DISTINTAS, A SESSÃO DEPENDE DESTA LINHA. O cookie de sessão é httpOnly
   // (docs/decisoes/acesso.md, D22): JavaScript não o lê e não o manda à mão — quem
-  // o envia é o navegador, e só com `withCredentials`. Sem isto, front na 3000
-  // e API na 3001 são origens distintas e o cookie simplesmente não viaja: o
+  // o envia é o navegador, e só com `withCredentials`. Sem isto, com front e API
+  // em origens distintas (VITE_API_URL), o cookie simplesmente não viaja: o
   // sintoma é 401 em tudo depois de um login que respondeu 200, sem erro nenhum
   // no console.
   withCredentials: true,
@@ -45,7 +45,7 @@ export function registrarPerdaDeSessao(handler: () => void): void {
  * O erro traduzido: a mensagem que a tela mostra, com o erro original no `cause`.
  *
  * Nome próprio e não `Error` cru para a rejeição ser reconhecível na pilha e no
- * console. Nenhuma tela faz `instanceof` hoje — todas leem só o `message`.
+ * console. Nenhuma tela faz `instanceof` hoje.
  */
 export class ErroDaApi extends Error {
   /**
@@ -102,7 +102,7 @@ apiClient.interceptors.response.use(
             : 'Não foi possível falar com o servidor.';
 
     // `ErroDaApi` e não `Error`: continua sendo um `Error` para todo código que
-    // só lê `.message` (que é todo ele hoje), e o `cause` guarda o erro do axios
+    // só lê `.message`, e o `cause` guarda o erro do axios
     // para quem for depurar.
     return Promise.reject(new ErroDaApi(message, { cause: error, corpo: error?.response?.data, status: error?.response?.status }));
   },

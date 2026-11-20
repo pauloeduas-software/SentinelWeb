@@ -18,7 +18,7 @@ import { chavesComLugar, lugarDaChave, rotuloDaChave } from '../helpers/licenca.
 // SÃO DOIS ALVOS, E NÃO TRÊS — posto de trabalho NÃO recebe licença (D39).
 //
 // A ausência é a decisão, e a ajuda do campo Computador existe para quem for procurar
-// o botão que falta: o desktop fixo da Mesa 1 é um ATIVO, e a licença vai para
+// o botão que falta: o desktop fixo da Mesa 1 é um COMPUTADOR, e a licença vai para
 // ele. Licença por assinatura de pessoa (Microsoft 365, Adobe) vai para o
 // colaborador.
 // ═════════════════════════════════════════════════════════════════════════════
@@ -76,7 +76,7 @@ export default function EntregaLicencaModal({ licenca, onClose, onSubmit }: Entr
     } catch (falha) {
       // É aqui que aparecem o 409 de sem licença livre (com os números), o do
       // alvo que já está com ela, o da chave que outra aba tomou no meio, o do
-      // colaborador desativado e o do ativo baixado.
+      // colaborador desativado e o do computador baixado.
       setErro((falha as Error).message);
     } finally {
       setSalvando(false);

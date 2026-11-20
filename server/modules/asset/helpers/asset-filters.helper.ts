@@ -23,7 +23,7 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 }
 
 // ---------------------------------------------------------------------------
-// VISTA E FILTROS DO DOMÍNIO — e não `view` do `core` (D20)
+// VISTA E FILTROS DO DOMÍNIO — e não `view` da `infra` (D20)
 // ---------------------------------------------------------------------------
 //
 // `trashed` é genérico: toda tabela com `deletedAt` o entende, e por isso mora
@@ -33,7 +33,7 @@ export function buildAssetWhere(q?: string): Prisma.AssetWhereInput {
 //
 // A consequência prática: a vista do ATIVO é parseada AQUI, inteira, e o
 // controller entrega ao parser genérico só o que sobrou (página e busca).
-// Uma vista, um lugar — traduzir `retired` para `active` antes do `core` e
+// Uma vista, um lugar — traduzir `retired` para `active` antes da `infra` e
 // guardar a real aqui deixaria duas verdades sobre a mesma chave.
 
 const ASSET_VIEWS = ['active', 'trashed', 'retired'] as const;
@@ -54,7 +54,7 @@ export interface AssetFilters {
 export const SEM_BAIXA: Prisma.AssetWhereInput = { retiredAt: null };
 
 // `z.object`, e NÃO `strictObject`: aqui só se lê o que é do domínio e o resto
-// (page, perPage, q) segue intacto para o parser do `core`, que é
+// (page, perPage, q) segue intacto para o parser da `infra`, que é
 // estrito e continua recusando typo em chave dele.
 const assetFiltersSchema = z.object({
   view: z.enum(ASSET_VIEWS, `vista inválida: use ${ASSET_VIEWS.join(', ')}`).default('active'),
@@ -70,7 +70,7 @@ const CHAVES_DO_DOMINIO = Object.keys(assetFiltersSchema.shape);
 
 /**
  * Parte a query da listagem em duas: o que só o ITAM entende e o que o parser
- * genérico do `core` entende.
+ * genérico da `infra` entende.
  *
  * Precisa acontecer ANTES do `parseListQuery`: ele valida com `strictObject` e
  * responderia 422 a `?statusType=` — a mesma proteção que pega `?pag=2`.

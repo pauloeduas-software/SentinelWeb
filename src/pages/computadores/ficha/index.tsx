@@ -26,7 +26,7 @@ import { bloqueioDaEntrega } from '../helpers/posse.helper';
 import { useFichaDoComputador } from './hooks/useFichaDoComputador';
 import { usePode } from '../../../stores/auth.store';
 
-// A TELA DO ATIVO — `/computadores/:id`.
+// A TELA DO COMPUTADOR — `/computadores/:id`.
 //
 // Existe porque uma URL colada no navegador não tem a linha que a listagem
 // tinha em memória: antes o modal recebia o ativo já carregado pela tabela, e

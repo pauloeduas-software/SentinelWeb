@@ -11,7 +11,7 @@ import { prisma } from '../../server/infra/database/prismaClient';
 // `?vista=`, respondia *campo não reconhecido*. Ele existia no
 // `buildEndpointWhere`, estava tipado no use-case e era INALCANÇÁVEL pela borda.
 //
-// A causa: a query tem dois donos. `parseListQuery` (do `core`) é `strictObject`
+// A causa: a query tem dois donos. `parseListQuery` (da `infra`) é `strictObject`
 // e recusa toda chave que não conhece; o schema do domínio lê a mesma query. Os
 // dois recebiam a query inteira, e o primeiro barrava o que era do segundo.
 //

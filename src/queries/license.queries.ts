@@ -35,7 +35,7 @@ const licenseKeys = {
   entregas: (id: string, params: ParamsDoDetalhe) => ['licenses', 'entregas', id, params] as const,
   historico: (id: string, params: ParamsDoDetalhe) => ['licenses', 'historico', id, params] as const,
   alertas: () => ['licenses', 'alertas'] as const,
-  /** O que está licenciado NUM ativo — a aba Licenças da tela do ativo. */
+  /** O que está licenciado NUM ativo — a aba Licenças da ficha do computador. */
   doAtivo: (assetId: string) => ['licenses', 'do-ativo', assetId] as const,
 };
 
@@ -111,7 +111,7 @@ export function useAssetLicensesQuery(assetId: string | null) {
  *
  * A licença entregue é POSSE (D93): entregá-la a alguém muda a ficha daquela
  * pessoa, o histórico dela e o 409 da desativação; entregá-la a uma máquina
- * muda a aba Licenças e o histórico do ativo. Operação que atravessa domínios
+ * muda a aba Licenças e o histórico do computador. Operação que atravessa domínios
  * invalida os dois lados.
  *
  * Devolve a promessa, e o `onSettled` a devolve também: a mutação só termina

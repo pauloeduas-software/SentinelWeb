@@ -7,7 +7,7 @@
 | Pasta | A regra | O que mora lá |
 |---|---|---|
 | [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, telas, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque, o que chega do agente |
-| [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste |
+| [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste, acrescentar uma invariante |
 | [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (de `A` em diante), um arquivo por assunto |
 
 E um arquivo na raiz: este mapa. Não há lista do que falta fazer — o que o sistema deixou de

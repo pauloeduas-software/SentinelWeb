@@ -2,9 +2,10 @@ import type { ZodType } from 'zod';
 import type { prisma } from '../../../infra/database/prismaClient';
 import type { ReferenciaDoErro } from '../../../infra/errors/app-error';
 
-// O contrato de UMA tabela de catálogo. Sete arquivos preenchem isto e o CRUD
-// genérico (use-cases/) atende às sete — em vez de sete fatias verticais quase
-// idênticas, que é o que o docs/referencia/arquitetura.md chama de cerimônia.
+// O contrato de UMA tabela de catálogo. Sete arquivos preenchem isto, mais o do
+// posto (`workstationSpec`), e o CRUD genérico (use-cases/) atende a todos — em
+// vez de fatias verticais quase idênticas, que é o que o
+// docs/referencia/arquitetura.md chama de cerimônia.
 
 /**
  * Cliente do Prisma aceito pelo CRUD: tanto o global quanto o de transação.
@@ -28,7 +29,7 @@ export type ClienteCatalogo = Omit<
 /**
  * O mínimo que o CRUD usa de um delegate do Prisma.
  *
- * POR QUE NÃO O TIPO REAL: a união dos cinco delegates não existe em TS — cada um
+ * POR QUE NÃO O TIPO REAL: a união dos oito delegates não existe em TS — cada um
  * tem `where`/`data`/`select` próprios e a interseção deles não aceita nada.
  * Cada spec faz UM cast, ao lado do nome do model, e o cast morre ali.
  *

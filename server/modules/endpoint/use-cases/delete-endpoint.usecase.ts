@@ -9,8 +9,8 @@ import { desconectarAgente } from '../../agent/agent.registry';
 //
 // Três coisas, nesta ordem: a credencial do agente sai, a linha da máquina sai
 // (a telemetria vai junto, pelo `Cascade`), e a conexão aberta fecha. Sem a
-// credencial, a reconexão leva 401: a máquina só volta reinstalando o agente
-// com o segredo de instalação. Era a revogação da CR, que morava num comando de
+// credencial, a reconexão leva 401: a máquina só volta quando o segredo de
+// instalação é posto nela de novo, e o agente se cadastra outra vez. Era a revogação da CR, que morava num comando de
 // terminal e não fechava a conexão; daqui, que tem o socket, fecha.
 //
 // A MÁQUINA COM COMPUTADOR NÃO SAI: é 409, como a baixa do computador com

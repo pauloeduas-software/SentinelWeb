@@ -130,7 +130,7 @@ O buraco concreto que isso deixava:
 
 | | antes | agora |
 |---|---|---|
-| Vítima desconfia e troca a senha | invasor **continua dentro** por até 8h | invasor cai na requisição seguinte |
+| Vítima desconfia e troca a senha | invasor **continua dentro** até a sessão expirar, em até 48h | invasor cai na requisição seguinte |
 | Admin redefine a senha de alguém | sessões antigas seguem valendo | todas caem |
 
 O mecanismo é um inteiro na linha do usuário, assinado dentro do token como
@@ -238,7 +238,7 @@ lista de cargos aceitos por rota. A conta nova nasce `TECNICO`.
 não separa os dois, e o controller exige Supervisor quando o corpo traz `isActive`. A lixeira
 (`?view=trashed` em computadores e colaboradores) é recusada do mesmo jeito, e a ficha do
 computador e a do colaborador excluídos só abrem para o Supervisor: para o Técnico é 404. O 403 nomeia o
-cargo que falta: "Esta ação exige o cargo de Supervisor ou acima." A tela esconde o que o cargo
+cargo que falta: "Esta ação exige o cargo de Supervisor ou acima. Fale com quem administra o sistema." A tela esconde o que o cargo
 não alcança — item do menu, URL digitada (volta para a raiz, `SoCargo` em `App.tsx`), botões e a
 aba Lixeira —, e isso é interface: quem autoriza é o servidor.
 
@@ -355,7 +355,8 @@ do administrador, no banco, para responder se um erro foi de uma conta ou do sis
 
 - **`USER`** — a conta da sessão (`atorDaRequisicao`), com nome e e-mail por escrito e o número
   da requisição, que o servidor gera sempre (o `X-Request-Id` do cliente é ignorado);
-- **`SYSTEM`** — o vínculo automático da reconciliação em `ON` (`job:reconciliacao`) e a conta
+- **`SYSTEM`** — o vínculo automático, no handshake e ao salvar o computador
+  (`vinculo-automatico`), a máquina reinstalada que herda a própria linha (`agent:reinstalacao`) e a conta
   criada pelo `acesso:administrador` (`cli:criar-administrador:<usuário do sistema operacional>`,
   [AP](../decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it));
 - **`ANONYMOUS`** — a tela de login sem sessão: a senha errada, a conta bloqueada e a desativada

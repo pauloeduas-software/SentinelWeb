@@ -17,7 +17,7 @@ import { criarAtivo, criarFabricante, criarModelo, criarPosto, diasAFrente, idsD
 //                                  previsto para a devolução.
 //
 // Arquivo próprio, e não dentro de `ativo-em-posto.test.ts`: aquele prova que o
-// ativo entregue SAI da listagem, e é `inject` puro. Estes dois abrem uma porta
+// ativo entregue CONTINUA na listagem, e é `inject` puro. Este arquivo abre uma porta
 // de verdade (o agente fala WebSocket), e o assunto é o que a ficha do posto lê.
 
 let api: ApiDeTeste;

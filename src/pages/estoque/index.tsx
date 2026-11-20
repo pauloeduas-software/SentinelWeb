@@ -17,7 +17,7 @@ import { usePode } from '../../stores/auth.store';
 //
 // Markup e mais nada: estado e chamadas ficam no `useEstoque`
 // (docs/referencia/arquitetura.md). Sem abas: o desativado fica na lista, como
-// nas Configurações.
+// em Usuários.
 
 export default function EstoquePage() {
   const {

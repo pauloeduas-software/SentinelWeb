@@ -14,8 +14,8 @@ import { formatarData } from '../../../helpers/format.helper';
 // A COLUNA PRINCIPAL É A CONTA — compradas, em uso, livres —, e os
 // números aparecem todos: "2 livres" sozinho não diz se sobrou muito ou pouco.
 //
-// A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DAS
-// CONFIGURAÇÕES (`CatalogTable`, AF): Editar, Encerrar/Reabrir no lugar do
+// A LINHA INTEIRA ABRE O DETALHE, e o `⋯` guarda as ações (AY). O CADASTRO É O DO
+// CATÁLOGO (`CatalogTable`, AF): Editar, Encerrar/Reabrir no lugar do
 // Desativar/Ativar, e Excluir; a encerrada fica na lista, esmaecida e marcada na
 // coluna Status; e Excluir sempre clica — a licença em uso recebe o 409 do
 // servidor, que diz com quem está e manda devolver (AG). Encerrar grava a data do

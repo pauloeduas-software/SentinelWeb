@@ -93,7 +93,7 @@ function SoCargo({ cargo, children }: { cargo: Cargo; children: React.ReactNode 
 }
 
 // Só o esqueleto da aplicação: moldura e rotas. Estado, chamada de API e regra
-// de tela ficam nas páginas (pages/<contexto>/hooks) e nos stores de domínio.
+// de tela ficam nas páginas (pages/<contexto>/hooks), em queries/ e em stores/.
 function Layout() {
   const { pathname } = useLocation();
   return (
@@ -119,16 +119,16 @@ function Layout() {
         <main className="min-w-0 flex-1 overflow-x-clip p-3 sm:p-4 md:p-6">
           <ErroDaTela chave={pathname}>
             <Routes>
-              {/* A RAIZ LEVA AOS ATIVOS, e isso é o fim de uma tela.
+              {/* A RAIZ LEVA AOS COMPUTADORES, e isso é o fim de uma tela.
                   `/` era a telemetria: a frota em cards, que ninguém abria para
                   perguntar nada — ela sabia a medida da máquina e não sabia de quem
-                  a máquina é. A telemetria foi para a ficha do ativo e a do posto, e
+                  a máquina é. A telemetria foi para a ficha do computador e a do posto, e
                   a raiz passou a levar para a tela que se usa de verdade, que é a
                   lista de COMPUTADORES. `replace` para que o botão de voltar não
                   jogue a pessoa de volta na raiz, num pingue-pongue. */}
               <Route path="/" element={<Navigate to="/computadores" replace />} />
               <Route path="/computadores" element={<ComputadoresPage />} />
-              {/* A tela do ativo. Rota própria, e não modal: é uma URL que se cola
+              {/* A ficha do computador. Rota própria, e não modal: é uma URL que se cola
                   no chamado, se abre em outra aba e se guarda nos favoritos. */}
               <Route path="/computadores/:id" element={<ComputadorFichaPage />} />
               {/* AS ROTAS ANTIGAS, redirecionando. `/itam` era o nome da tela; ele
@@ -148,7 +148,7 @@ function Layout() {
               <Route path="/postos/:id" element={<PostoFichaPage />} />
               {/* O ESTOQUE: monitor, teclado, mouse, cabo — o que tem
                   quantidade e não patrimônio (docs/decisoes/estoque.md). Perto
-                  de Postos porque a entrega pode ir para uma mesa, e perto de
+                  de Postos porque a entrega pode ir para um posto, e perto de
                   Licenças porque as duas são posse consumida em unidade. */}
               <Route path="/estoque" element={<LinkAntigoDoDetalhe parametro="item" caminho={caminhoDoItem}><EstoquePage /></LinkAntigoDoDetalhe>} />
               {/* A FICHA DO ITEM e a DA LICENÇA são página, como a do posto, e destino
@@ -172,18 +172,18 @@ function Layout() {
               <Route path="/users" element={<Navigate to="/usuarios" replace />} />
               <Route path="/users/:id" element={<RedirecionarColaborador />} />
               <Route path="/colaboradores" element={<ColaboradoresPage />} />
-              {/* A FICHA DO COLABORADOR: os dois baldes de posse
-                  (docs/referencia/modelo-de-posse.md, Camada 3). Debaixo de
+              {/* A FICHA DO COLABORADOR: o que está com a pessoa
+                  (docs/referencia/modelo-de-posse.md). Debaixo de
                   Colaboradores porque é de lá que ela abre, e é isso que acende o
                   item certo no menu. */}
               <Route path="/colaboradores/:id" element={<ColaboradorPage />} />
               <Route path="/configuracoes" element={<SoCargo cargo="SUPERVISOR"><ConfiguracoesPage /></SoCargo>} />
               {/* MINHA CONTA (AR): cada um edita o próprio nome e troca a própria
-                  senha. Não está no menu — abre pelo nome, no rodapé da barra. */}
+                  senha. Não está no menu — abre pelo menu do usuário, no cabeçalho. */}
               <Route path="/conta" element={<ContaPage />} />
               <Route path="/configuracoes/colaboradores/:id" element={<RedirecionarColaborador />} />
               {/* ENDEREÇO QUE NÃO EXISTE (um erro de digitação, um link de tela que
-                  saiu) volta para a raiz, como o `SoAdmin`: sem isto a moldura
+                  saiu) volta para a raiz, como o `SoCargo`: sem isto a moldura
                   abria com o conteúdo em branco. */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

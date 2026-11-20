@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 /**
  * As duas perguntas que as listagens da Camada 2 respondem.
  *
- * `current` — quem ocupa o posto AGORA (`endedAt IS NULL`). É o padrão porque é
+ * `current` — quem ocupa o posto AGORA (`endedAt IS NULL`). É a das rotas porque é
  * a pergunta da operação e a que a Camada 3 usa para resolver responsáveis
  * (docs/referencia/modelo-de-posse.md).
  *

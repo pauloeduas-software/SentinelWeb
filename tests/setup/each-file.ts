@@ -4,8 +4,9 @@ import { exigirBancoDeTeste, resetarBanco } from './database';
 
 // Roda uma vez POR ARQUIVO de teste (é o `setupFiles` do vitest.config.ts).
 //
-// POR ARQUIVO, e não por teste: semear custa um hash de argon2 (deliberadamente
-// lento, ~100ms), e pagá-lo a cada `it` faria a suíte inteira levar minutos.
+// POR ARQUIVO, e não por teste: criar o administrador custa um hash de argon2
+// (deliberadamente lento, ~100ms), e pagá-lo a cada `it` faria a suíte inteira
+// levar minutos.
 // O preço é que testes do mesmo arquivo compartilham banco — então cada arquivo
 // cria o que precisa com nome próprio, e um arquivo que depende da ORDEM dos
 // seus testes está mal escrito.

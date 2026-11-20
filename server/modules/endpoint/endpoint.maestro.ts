@@ -5,7 +5,7 @@ import { DESTRUCTIVE_RATE_LIMIT, WRITE_RATE_LIMIT } from '../../infra/http/write
 
 const logger = createLogger('endpoint.maestro');
 
-// Máquinas descobertas pelo agente (model `Endpoint`) — o lado RMM do produto.
+// As máquinas com o agente (model `Endpoint`) — o lado RMM do produto.
 export class EndpointMaestro {
   static async setupRoutes(server: FastifyInstance): Promise<void> {
     server.get('/api/endpoints', endpointController.list);

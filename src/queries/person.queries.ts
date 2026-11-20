@@ -32,8 +32,8 @@ export function usePersonQuery(id: string | null) {
 }
 
 /**
- * O Histórico da pessoa: posses diretas + ocupações de posto + licenças
- * entregues a ela, do mais recente para o mais antigo.
+ * O Histórico da pessoa: posses diretas + ocupações de posto + licenças e
+ * estoque entregues a ela, do mais recente para o mais antigo.
  */
 export function usePersonHistoryQuery(id: string | null, params: ParamsDoHistorico) {
   return useQuery({

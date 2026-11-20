@@ -4,7 +4,7 @@ import { lerEnvDeTeste } from './tests/setup/env-de-teste';
 // Configuração PRÓPRIA, separada do `vite.config.ts`: o do frontend carrega o
 // plugin do React e resolve `src/`, e nada disso tem uso aqui — a suíte exercita
 // o servidor, em Node, contra o Postgres. Arquivo separado é também o que faz
-// `npm test` não depender de o build do painel estar saudável.
+// `bun run test` não depender de o build do painel estar saudável.
 
 // O leitor do `.env.test` mora em `tests/setup/env-de-teste.ts` (com o porquê
 // de não ser o `process.loadEnvFile()`): o playwright.config.ts lê o mesmo
@@ -58,7 +58,7 @@ export default defineConfig({
     globalSetup: ['tests/setup/global-setup.ts'],
     setupFiles: ['tests/setup/each-file.ts'],
 
-    // Semear paga um hash de argon2, que é lento de propósito.
+    // Criar o administrador do harness paga um hash de argon2, que é lento de propósito.
     hookTimeout: 60_000,
     // Generoso porque há teste que dispara duas requisições simultâneas e
     // espera o `FOR UPDATE` serializar as duas.

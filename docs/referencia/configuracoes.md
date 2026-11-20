@@ -230,7 +230,7 @@ regra "todo modelo tem fabricante", ele usa um fabricante explícito,
 
 O que distingue um montado do outro fica no **ativo**: as notas dele
 ("i5-7400, GTX 980, 1 TB") e, quando o agente está instalado, o processador, a
-memória e o disco que chegam sozinhos na aba **Máquina**. Não se cadastra
+memória, o disco e a placa de vídeo que chegam sozinhos na aba **Máquina**. Não se cadastra
 Intel, AMD ou Nvidia como fabricante para montar um modelo.
 
 ## Localizações

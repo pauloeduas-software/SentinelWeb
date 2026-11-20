@@ -14,7 +14,8 @@ import { z } from 'zod';
 // banco. Teto de 128 porque argon2 aceita entrada grande e um corpo de 1 MB
 // viraria negação de serviço de uma requisição só.
 //
-// Só a troca da própria senha a usa: o cadastro e a edição de usuário não
+// Só a troca da própria senha e o comando do administrador
+// (`criar-administrador.cli.ts`) a usam: o cadastro e a edição de usuário não
 // recebem senha (AU).
 export const senhaNova = z.string('senha: campo obrigatório')
   .min(12, 'senha: mínimo de 12 caracteres')

@@ -118,9 +118,9 @@ Uma linha por pessoa que ocupa um posto, com o turno.
 - **Aberta** = `endedAt IS NULL`. É ocupante atual.
 - **O "desde" é um dia**, como a entrega (AM): hoje por padrão, passado pode,
   futuro é 422; o dia passado fica ao meio-dia de Brasília, e a tela mostra só o dia.
-- **O fim também** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): Encerrar abre o campo "Saiu em" na
-  linha, com hoje; passado pode, futuro é 422, e nunca antes do início — 422 `O fim
-  da ocupação (09/03/2026) não pode ser antes do início (10/03/2026).` O DELETE leva
+- **O fim também** ([AN](../decisoes/licencas.md#an--o-que-está-em-uso-bloqueia-e-nenhuma-data-é-futura)): Registrar saída abre o campo "Saiu em" na
+  linha, com hoje; passado pode, futuro é 422, e nunca antes do início — 422 `A saída
+  (09/03/2026) não pode ser antes da entrada (10/03/2026).` O DELETE leva
   `{ endedAt: 'AAAA-MM-DD' }` no corpo; sem ele, é agora.
 - `shift` é **texto livre** (`"Manhã"`, `"Tarde"`, `"12x36 A"`). Enum engessaria
   escalas reais; faixa de horário seria agenda, não inventário.

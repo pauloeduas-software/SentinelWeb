@@ -14,8 +14,8 @@ import type { ItemDeEstoque, ItemDeEstoqueInput } from '../../../types/stock.typ
 // em uso, e o servidor responde 409 com a conta.
 //
 // NA EDIÇÃO, O FORMULÁRIO INTEIRO VAI AO SERVIDOR, como nas Configurações (AF).
-// O preço, declarado: o formulário aberto há tempo desfaz a edição que outra
-// pessoa salvou no meio. O servidor continua barrando o que quebra regra.
+// O formulário aberto há tempo não desfaz a edição que outra pessoa salvou no
+// meio: leva a versão lida, e o servidor responde 409. O servidor continua barrando o que quebra regra.
 //
 // A CATEGORIA DECIDE PARA ONDE O ITEM VAI (AI): a de Estoque a colaborador ou
 // posto, a de Componente só a computador. O seletor oferece as duas, e a
@@ -40,7 +40,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
   const [name, setName] = useState(item?.name ?? '');
   const [categoryId, setCategoryId] = useState(item?.categoryId ?? '');
   // As categorias de componente, para a linha de aviso — a mesma consulta do
-  // seletor, recortada pelo tipo. A desativada que o item já usa vem pelo
+  // seletor, recortada pelo tipo. A que o item já usa vem pelo
   // tipo dela no próprio item.
   const { data: componentes } = useCatalogOptionsQuery('categories', 'COMPONENT');
   const categoriaDeComponente = (item?.categoryId === categoryId && item.category.type === 'COMPONENT')
@@ -109,7 +109,7 @@ export default function ItemFormModal({ item, onClose, onSubmit }: ItemFormModal
         <Input required value={name} onChange={(e) => setName(e.target.value)} />
       </Campo>
 
-      {/* Filtrada por TIPO: o seletor não oferece categoria de ativo ou de
+      {/* Filtrada por TIPO: o seletor não oferece categoria de computador ou de
           licença, porque o servidor a recusaria com 422. */}
       <Campo
         rotulo="Categoria"

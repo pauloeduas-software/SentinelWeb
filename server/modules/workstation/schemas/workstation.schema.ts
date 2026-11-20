@@ -24,7 +24,7 @@ export const updateWorkstationSchema = z.strictObject({
  *
  * Separado do `parseListQuery` porque lá `view` significa LIXEIRA
  * (`active|trashed`), e aqui significa OCUPAÇÃO. São perguntas diferentes com
- * a mesma palavra, e o `strictObject` do core recusaria `todos` de qualquer
+ * a mesma palavra, e o `strictObject` do infra recusaria `todos` de qualquer
  * jeito — o controller tira esta chave da query antes de passar o resto adiante.
  *
  * `strictObject` também aqui: `?vew=vagos` (typo) usaria o padrão em silêncio e

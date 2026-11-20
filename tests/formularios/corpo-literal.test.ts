@@ -35,7 +35,7 @@ afterAll(async () => {
 });
 
 /**
- * CÓPIA FIEL de `valoresIniciais(null)` de
+ * CÓPIA FIEL de `valoresIniciais(null, false, statusPadraoId)` de
  * `src/pages/computadores/components/AssetFormModal.tsx`.
  *
  * Os dois `ReferenceSelect` obrigatórios (modelo e status) chegam preenchidos
@@ -171,11 +171,11 @@ describe('PUT /api/assets/:id com o corpo literal do formulário de edição', (
 
 describe('POST /api/users com o corpo literal do UserFormModal', () => {
   /**
-   * Cópia fiel de `src/pages/usuarios/components/UserFormModal.tsx`: nome e
-   * e-mail, sem senha (AU) — a conta nasce com a temporária.
+   * Cópia fiel de `src/pages/usuarios/components/UserFormModal.tsx`: nome,
+   * e-mail e cargo, sem senha (AU) — a conta nasce com a temporária.
    */
   function corpoDoFormularioDeUsuario(sobrescrever: Record<string, unknown> = {}) {
-    return { name: '', email: '', ...sobrescrever };
+    return { name: '', email: '', role: 'TECNICO', ...sobrescrever };
   }
 
   it('aceita o corpo mínimo da tela', async () => {

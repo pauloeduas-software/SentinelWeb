@@ -18,7 +18,7 @@ export const COOKIE_SESSAO = 'sentinel_sessao';
  * estava (AU).
  *
  * FIXA, sem renovar a cada requisição: a telemetria consulta o servidor a cada
- * 5 s, e uma aba esquecida aberta renovaria a sessão para sempre.
+ * 30 s, e uma aba esquecida aberta renovaria a sessão para sempre.
  *
  * Com teto: mandar alguém para a lixeira NÃO invalida o token que ele já tem no
  * navegador. O `preHandler` relê o usuário a cada requisição (e é essa a defesa
@@ -37,10 +37,9 @@ export const SESSAO_SEGUNDOS = 48 * 60 * 60;
 function atributosDoCookie(): CookieSerializeOptions {
   return {
     httpOnly: true,
-    // `Lax`, não `Strict`: em desenvolvimento o painel roda na 3000 e a API na
-    // 3001, e `Strict` faria o navegador simplesmente não enviar o cookie — o
-    // sintoma é 401 em tudo depois de um login que respondeu 200, sem erro
-    // nenhum no console.
+    // `Lax`, não `Strict`: com `Strict` o navegador não manda o cookie quando se
+    // chega ao painel por um link de outro site, e quem abre o link cai no login
+    // mesmo com a sessão de pé.
     sameSite: 'lax',
     // Só em produção: `Secure` em http://localhost faz o navegador descartar o
     // cookie em silêncio.

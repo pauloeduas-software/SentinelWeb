@@ -6,8 +6,9 @@ import { prisma } from '../../../infra/database/prismaClient';
 // o status (CS).
 export const STALE_AFTER_MS = 2 * 60 * 1000;
 
-// Agente que morreu sem fechar o WebSocket (queda de energia, cabo arrancado,
-// processo morto) fica ONLINE para sempre: nenhum `close` chega. Este use-case
+// Máquina que sumiu sem fechar o WebSocket (queda de energia, cabo arrancado,
+// máquina suspensa) fica ONLINE para sempre: nenhum `close` chega. O processo do
+// agente que morre não é este caso: o sistema fecha a conexão dele. Este use-case
 // é a rede de segurança — quem não dá sinal há STALE_AFTER_MS vira OFFLINE.
 export async function markStaleEndpointsOffline(): Promise<number> {
   const cutoff = new Date(Date.now() - STALE_AFTER_MS);

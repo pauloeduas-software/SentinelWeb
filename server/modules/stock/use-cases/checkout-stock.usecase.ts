@@ -112,8 +112,7 @@ function assertAlvoDaCategoria(item: { name: string; category: { type: string } 
  * a data de compra do computador, que o dia da entrega não antecede.
  *
  * Pessoa e computador saem por `findFirst`, que o escopo da lixeira alcança:
- * não se entrega nada a um cadastro na lixeira. Posto sai travado, pela marca
- * de desativado.
+ * não se entrega nada a um cadastro na lixeira. Posto sai travado.
  * DESATIVADO é diferente de APAGADO, e os dois são recusados — entregar a quem
  * saiu reabriria, uma linha depois, a pendência que a entrega da empresa fechou.
  * 409 e não 404: a pessoa existe, o estado dela é que recusa. O computador

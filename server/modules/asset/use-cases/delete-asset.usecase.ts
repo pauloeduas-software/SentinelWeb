@@ -13,7 +13,7 @@ import { assertSemPosse } from './assert-sem-posse.usecase';
 import { travarAtivoOuFalhar } from './lock-asset.usecase';
 
 /**
- * Manda para a lixeira. O ativo TEM soft delete, ao contrário do catálogo (D8):
+ * Manda para a lixeira. O ativo TEM soft delete, ao contrário do resto do catálogo (D8), que só tem a do colaborador (V):
  * aqui a linha carrega histórico de compra, garantia e posse, e apagar de
  * verdade é perda de dado, não de cadastro.
  *

@@ -56,7 +56,7 @@ export interface PosseResolvida {
   checkoutAt: string | null;
   /** Quando a entrega deve voltar: é a aba Responsáveis que mostra. */
   expectedCheckinAt: string | null;
-  /** A observação da entrega: a aba Responsáveis mostra, como em Estoque e Licenças. */
+  /** As notas da entrega: a aba Responsáveis mostra, como em Estoque e Licenças. */
   checkoutNotes: string | null;
   /**
    * Posse apontando para um posto SEM ocupante aberto: equipamento
@@ -83,7 +83,7 @@ interface PostoRef {
 /**
  * Uma pessoa ocupando um posto — `GET /api/workstations/:id/occupants`.
  *
- * Aberta = `endedAt` nulo. Encerrar é preencher a data: "quem respondia pela
+ * Aberta = `endedAt` nulo. Registrar a saída é preencher a data: "quem respondia pela
  * Mesa 1 em março?" continua respondível.
  */
 export interface WorkstationOccupant {

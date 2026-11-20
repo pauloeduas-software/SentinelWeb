@@ -207,7 +207,7 @@ export async function login(
     return relida;
   });
 
-  // Os três saem daqui juntos porque quem ASSINA o token é o controller
+  // Os quatro saem daqui juntos porque quem ASSINA o token é o controller
   // (transporte), e ele não pode ir ao banco buscar o número por conta própria —
   // seria uma segunda leitura, capaz de divergir desta.
   return {

@@ -20,10 +20,10 @@ const buscar = (hwid: string) => prisma.endpoint.findUnique({ where: { hwid } })
 
 describe('o handshake sem identidade', () => {
   it('cria a máquina sem nenhum campo de identidade', async () => {
-    const agente = await conectarAgente(api, 'hwid-agente-antigo');
+    const agente = await conectarAgente(api, 'hwid-sem-identidade');
     await agente.handshake();
 
-    const endpoint = await esperarPor('a máquina antiga aparecer', () => buscar('hwid-agente-antigo'));
+    const endpoint = await esperarPor('a máquina sem identidade aparecer', () => buscar('hwid-sem-identidade'));
 
     expect(endpoint.hostname).toBe('maquina-de-teste');
     expect(endpoint.status).toBe('ONLINE');
@@ -34,30 +34,33 @@ describe('o handshake sem identidade', () => {
   });
 });
 
-describe('o handshake novo traz identidade', () => {
+describe('o handshake com identidade', () => {
   it('grava a identidade vinda em PascalCase', async () => {
-    const agente = await conectarAgente(api, 'hwid-agente-novo');
+    const agente = await conectarAgente(api, 'hwid-com-identidade');
     await agente.handshake({
       Hostname: 'PC-ANA',
       BiosSerial: 'SN-ABC-123',
-      SystemUuid: '4c4c4544-0031-4a10-8051-b7c04f584d32',
-      MacAddress: '00-1A-2B-3C-4D-5E',
+      SystemUuid: '4c4c4544-0054-4510-8053-d4c045303031',
+      MacAddress: '00:1a:2b:3c:4d:5e',
     });
 
-    const endpoint = await esperarPor('a máquina nova aparecer', async () => {
-      const achado = await buscar('hwid-agente-novo');
+    const endpoint = await esperarPor('a máquina com identidade aparecer', async () => {
+      const achado = await buscar('hwid-com-identidade');
       return achado?.biosSerial ? achado : null;
     });
 
     expect(endpoint.biosSerial).toBe('SN-ABC-123');
-    expect(endpoint.systemUuid).toBe('4c4c4544-0031-4a10-8051-b7c04f584d32');
+    expect(endpoint.systemUuid).toBe('4c4c4544-0054-4510-8053-d4c045303031');
 
     await agente.fechar();
   });
 });
 
 describe('o inventário que a aba Máquina mostra (DA)', () => {
-  const placa = { Name: 'UHD Graphics 630', MemoryBytes: null };
+  // A integrada vai sem `MemoryBytes`, porque o agente não manda campo nulo, e é
+  // gravada com ele nulo.
+  const placa = { Name: 'UHD Graphics 630' };
+  const gravada = { Name: 'UHD Graphics 630', MemoryBytes: null };
 
   it('grava o fabricante, o modelo e as placas de vídeo', async () => {
     const agente = await conectarAgente(api, 'hwid-inventario');
@@ -71,17 +74,26 @@ describe('o inventário que a aba Máquina mostra (DA)', () => {
     });
 
     expect(endpoint.hardwareModel).toBe('OptiPlex 7080');
-    expect(endpoint.gpus).toEqual([placa]);
+    expect(endpoint.gpus).toEqual([gravada]);
 
-    // O HANDSHAKE QUE NÃO TRAZ A LISTA NÃO A APAGA, como a série: a leitura que
-    // falhou numa conexão não é a placa que saiu da máquina.
+    // O HANDSHAKE QUE NÃO TRAZ A LISTA NÃO A APAGA, como a série: o agente sem o
+    // `/sys/bus/pci/devices` não manda o campo, e não ter o que ler não é a placa
+    // que saiu da máquina.
     await agente.handshake({ Hostname: 'pc-inventario-2' });
     const depois = await esperarPor('o segundo handshake', async () => {
       const achado = await buscar('hwid-inventario');
       return achado?.hostname === 'pc-inventario-2' ? achado : null;
     });
-    expect(depois.gpus).toEqual([placa]);
+    expect(depois.gpus).toEqual([gravada]);
     expect(depois.manufacturer).toBe('Dell Inc.');
+
+    // A lista vazia apaga: é a máquina sem placa nenhuma.
+    await agente.handshake({ Hostname: 'pc-inventario-3', Gpus: [] });
+    const semPlaca = await esperarPor('o handshake sem placa', async () => {
+      const achado = await buscar('hwid-inventario');
+      return achado?.hostname === 'pc-inventario-3' ? achado : null;
+    });
+    expect(semPlaca.gpus).toEqual([]);
 
     await agente.fechar();
   });

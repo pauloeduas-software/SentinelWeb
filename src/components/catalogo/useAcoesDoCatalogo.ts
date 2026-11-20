@@ -53,7 +53,7 @@ export function useAcoesDoCatalogo(spec: CatalogUiSpec, aposGravar?: () => void)
       await editar.mutateAsync({ id: registro.id, data: { [campo]: !ligado } });
       notificar.sucesso(feito(ligado ? 'desativado' : 'ativado'));
     } catch (erro) {
-      // A desativação do colaborador recusada traz as licenças dele, com link.
+      // A desativação do colaborador recusada traz o que está com ele, com link.
       notificar.erro((erro as Error).message, linksDoErro(erro));
     } finally {
       aposGravar?.();
@@ -76,7 +76,7 @@ export function useAcoesDoCatalogo(spec: CatalogUiSpec, aposGravar?: () => void)
     } catch (erro) {
       // É aqui que aparece o 409 de "em uso por N registros" — a regra que
       // impede apagar uma categoria que alguém está usando — e o do
-      // colaborador, com as licenças dele em link.
+      // colaborador, com o que está com ele em link.
       notificar.erro((erro as Error).message, linksDoErro(erro));
       return false;
     } finally {

@@ -9,7 +9,7 @@ import { linksDoErro } from '../../../helpers/erro.helper';
 type FormularioDoItem = 'editar' | 'entregar' | null;
 
 // O QUE SE FAZ COM UM ITEM, na linha da lista e na ficha: as mesmas regras e as
-// mesmas frases nos dois lugares. É o cadastro das Configurações (`useCatalog`):
+// mesmas frases nos dois lugares. É o cadastro do catálogo (`useAcoesDoCatalogo`):
 // Desativar/Ativar e Excluir com as frases de lá.
 export function useAcoesDoItem({ aoExcluir }: { aoExcluir?: () => void } = {}) {
   const notificar = useNotificacao();
@@ -54,7 +54,7 @@ export function useAcoesDoItem({ aoExcluir }: { aoExcluir?: () => void } = {}) {
   // não faz NADA: o 409 daqui é escrito para ensinar.
   // ─────────────────────────────────────────────────────────────────────────
 
-  // DESATIVAR/ATIVAR, com a frase de Configurações (`useCatalog`): grava só
+  // DESATIVAR/ATIVAR, com a frase de Colaboradores (`useAcoesDoCatalogo`): grava só
   // `isActive`, e confirma só na ida — ativar não tem o que perder. O botão
   // sempre clica: com unidade em uso, o 409 do servidor manda devolver antes.
   const handleAlternarAtivo = async (item: ItemDeEstoque) => {

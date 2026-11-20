@@ -21,7 +21,7 @@ type FonteDoEvento = 'POSSE' | 'LICENCA' | 'COMPONENTE';
 interface EventoDePosse {
   assignmentId: string;
   targetType: AlvoPosse;
-  /** "Laura Souza", "Mesa 1", "ATV-00012 — Dell Latitude". */
+  /** "Laura Souza", "Mesa 1". */
   targetLabel: string | null;
   /** As observações da entrega ou da devolução, conforme o evento. */
   notes: string | null;

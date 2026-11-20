@@ -16,11 +16,11 @@ export type VistaDasMaquinas = 'com' | 'sem' | 'sumidos';
 
 // Ritmo da revalidação (DA). O que muda mais depressa é o último contato, a cada
 // Ping do agente (30 a 60 s); a telemetria chega de hora em hora, e o Desconectado
-// leva uns 3 minutos. Abaixo disso, a requisição volta com o mesmo dado.
+// vem na hora quando a conexão fecha, e em uns 3 minutos quando ela some calada. Abaixo disso, a requisição volta com o mesmo dado.
 export const POLL_INTERVAL_MS = 30_000;
 
 /**
- * Máquinas descobertas pelo agente — sem telemetria: a amostra de UMA máquina
+ * As máquinas com o agente — sem telemetria: a amostra de UMA máquina
  * vem por `useEndpointQuery`.
  * Revalida sozinha: não há `setInterval` nem limpeza de timer para manter.
  *
@@ -41,15 +41,15 @@ export function useEndpointsQuery(vista?: VistaDasMaquinas) {
 }
 
 /**
- * UMA máquina, com a amostra mais recente — a ficha da máquina, a do ativo (aba
+ * UMA máquina, com a amostra mais recente — a ficha da máquina, a do computador (aba
  * Máquina) e a do posto.
  *
  * Revalida no mesmo ritmo do painel antigo. A diferença é o tamanho da resposta:
  * ali eram as 500 linhas da frota a cada ciclo para desenhar os cards; aqui é a
  * máquina que está na tela.
  *
- * `enabled` porque ativo sem máquina vinculada é o caso comum — monitor, cadeira
- * e cabo nunca terão agente —, e `null` ali não pode virar `/endpoints/null`.
+ * `enabled` porque ativo sem máquina vinculada é comum — nem todo computador
+ * tem agente —, e `null` ali não pode virar `/endpoints/null`.
  */
 export function useEndpointQuery(id: string | null) {
   return useQuery({
@@ -62,7 +62,8 @@ export function useEndpointQuery(id: string | null) {
 
 /**
  * Comando de sistema na máquina. Não invalida cache: o efeito não é um dado
- * nosso — é a máquina desligando. O próximo ciclo de telemetria mostra.
+ * nosso — é a máquina desligando. Quem mostra é o status: a desligada ou
+ * reiniciada vira Desconectado na hora, e a suspensa, em uns 3 minutos.
  *
  * Pelo ID da máquina, e não pelo hwid: quem resolve a identidade de hardware é o
  * servidor (`send-command.usecase.ts`). O painel tinha o hwid porque carregava a

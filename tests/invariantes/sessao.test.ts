@@ -40,11 +40,11 @@ async function logar(email: string, password: string): Promise<string> {
   return `${COOKIE_SESSAO}=${token}`;
 }
 
-/** Um colaborador com credencial própria, para não mexer na sessão do harness. */
+/** Um usuário com credencial própria, para não mexer na sessão do harness. */
 async function criarUsuarioComAcesso(sufixo: string) {
   // Este arquivo é sobre SESSÃO — ele precisa de alguém que entre. A conta troca
-  // a temporária do cadastro pela senha dela (AU), e o cargo nasce `ADMIN` pelo
-  // `@default` (Z).
+  // a temporária do cadastro pela senha dela (AU), e o cargo nasce `TECNICO` pelo
+  // `@default` (AV).
   const email = `fulano.${sufixo}@empresa.com`;
   const password = 'senha-comprida-do-teste';
   const { id } = await api.criarConta({ name: `Fulano ${sufixo}`, email }, password);
@@ -205,7 +205,7 @@ describe('endurecimento das rotas de credencial', () => {
       password: 'x'.repeat(64 * 1024),
     });
 
-    // O teto global do Fastify é 1 MiB e o login é a única rota que um anônimo
+    // O teto global do Fastify é 1 MiB e o login é a única rota da API que um anônimo
     // alcança: sem limite próprio, qualquer um faz o servidor gastar parse antes
     // de descobrir que a senha está errada.
     expect(resposta.status).toBe(413);

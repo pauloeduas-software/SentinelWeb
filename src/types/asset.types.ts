@@ -94,7 +94,7 @@ export interface Asset {
    */
   retiredAt: string | null;
   retiredReason: Referencia | null;
-  /** A observação da baixa, enquanto ela vale. Desfazer a baixa a limpa. */
+  /** As notas da baixa, enquanto ela vale. Reverter a baixa as limpa. */
   retiredNotes: string | null;
   /** Quando foi para a lixeira. Só a ficha traz, e só quem vê a Lixeira a encontra (BW). */
   deletedAt?: string | null;
