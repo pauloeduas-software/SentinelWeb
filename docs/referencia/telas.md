@@ -1,10 +1,38 @@
 # Telas
 
-> O molde de toda tela do painel: as peças, o visual, o registro, a ficha, a lista e o formulário. O
-> que é de uma tela só fica na página do assunto. As letras são decisões, e as do visual (AY, AZ, BA
-> e BB) estão em [`plataforma.md`](../decisoes/plataforma.md).
+> O menu e o molde de toda tela do painel: as peças, o visual, o registro, a ficha, a lista e o
+> formulário. O que é de uma tela só fica na página do assunto. As letras são decisões, e as do visual
+> (AY, AZ, BA e BB) estão em [`plataforma.md`](../decisoes/plataforma.md).
 
 ---
+
+## O menu
+
+Na ordem do menu, que se agrupa por assunto ([AH](../decisoes/acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)).
+Os endereços antigos (`/ativos`, `/itam`, `/users/:id` e `/configuracoes/colaboradores/:id`) redirecionam
+para os novos.
+
+| Seção do menu | Rota | O que é | Cargo mínimo |
+| --- | --- | --- | --- |
+| **Computadores** | `/computadores` | Listagem de computadores: filtros, busca por etiqueta e série, ações de ciclo de vida | TECNICO |
+|  | `/computadores/:id` | Ficha do computador: abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para a ficha da máquina, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
+|  | `/postos` | Postos de trabalho, cada um numa localização: quem está, a etiqueta do computador, se está vago; criar, editar e excluir posto | TECNICO |
+|  | `/postos/:id` | Ficha do posto: abas **Responsáveis** (corrigir o turno, registrar a saída), **Computador**, **Máquina** (link para a ficha da máquina, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
+| **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio: o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
+|  | `/estoque/:id` | Ficha do item: a conta e o cadastro no card, abas **Responsáveis** (com a devolução; **Computadores** no componente, e o consumível não tem) e **Histórico** | TECNICO |
+|  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |
+|  | `/licencas/:id` | Ficha da licença: a conta e o cadastro no card, abas **Responsáveis** (com a devolução), **Chaves** e **Histórico** | TECNICO |
+| **Convergência** | `/agentes` | As máquinas com o SentinelAgente: a série única liga a máquina ao computador sozinha; a vista Com computador desvincula, a Sem computador vincula à mão, e a Sumidos mostra quem parou de dar sinal. A busca acha a máquina pelo IP, e o `⋯` atualiza a máquina agora. Excluir a máquina é do Supervisor | TECNICO |
+|  | `/agentes/:id` | Ficha da máquina: o que ela diz de si no card, com Vincular ou Desvincular, e no `⋯` o Atualizar agora e o Excluir; o aviso de qual computador ela parece ser; e as abas **Computador** (o vinculado, ou o Vincular) e **Máquina** (telemetria e comandos) | TECNICO |
+| **Pessoas** | `/colaboradores` | Quem recebe equipamento: criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | TECNICO |
+|  | `/colaboradores/:id` | Ficha do colaborador: as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | TECNICO |
+| **Sistema** | `/configuracoes` | As seis abas de referência: categorias, fabricantes, modelos, localizações, status e motivos de baixa | SUPERVISOR |
+| **Gestão** | `/usuarios` | Quem opera o sistema: Técnico, Supervisor ou Administrador (AV). O cadastro pede nome, e-mail e cargo, e a conta nasce com uma senha temporária (o login é o e-mail) | ADMIN |
+
+A convergência RMM × ITAM (o vínculo entre a máquina que o agente apresenta e o computador cadastrado, a
+telemetria e o comando remoto) mora em Agentes: o vínculo na lista e na ficha da máquina, e a telemetria e o
+comando também na aba Máquina do computador e do posto. O critério de cada tela e o que já existiu e saiu
+estão em [`escopo.md`](../decisoes/escopo.md).
 
 ## As peças
 

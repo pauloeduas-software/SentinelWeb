@@ -1,152 +1,129 @@
-# Sentinel Web Dashboard 📊
-> **Painel de inventário de TI com convergência RMM**
+<div align="center">
 
-![React](https://img.shields.io/badge/React-19.x-61DAFB?logo=react)
-![Tailwind](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/torre-sem-fundo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="public/torre-sem-fundo-light.svg">
+  <img src="public/torre-sem-fundo-light.svg" width="72" alt="A torre do Sentinel">
+</picture>
 
-O **Sentinel Web** fornece a interface visual para o inventário de TI. É focado em densidade de informação e baixa latência de resposta.
+# SentinelWeb
 
-## 📁 Arquitetura
+**O inventário da TI (computadores, postos, estoque e licenças, e com quem está cada um), ligado ao que o
+[SentinelAgente](https://github.com/pauloeduas-software/SentinelAgente) vê em cada máquina.**
 
-Fatia vertical por domínio sobre uma base de infraestrutura compartilhada, com
-dependência em mão única: `modules → infra` no servidor, `pages → queries → api` no front.
+[![Licença: AGPL-3.0-or-later](https://img.shields.io/badge/licen%C3%A7a-AGPL--3.0--or--later-blue)](./LICENSE)
+[![CI](https://github.com/pauloeduas-software/SentinelWeb/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pauloeduas-software/SentinelWeb/actions/workflows/ci.yml)
 
+</div>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme/computadores-escuro.jpg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/readme/computadores-claro.jpg">
+  <img src=".github/readme/computadores-claro.jpg" alt="A lista de Computadores: etiqueta, série, modelo, localização, responsável e status de cada um, com os totais por status no alto">
+</picture>
+
+O SentinelWeb é o painel de quem cuida da TI de uma empresa: o que ela tem, com quem está, desde quando e
+em que estado. O SentinelAgente, instalado em cada máquina, conta ao painel o que a máquina é e como ela
+está agora, e a série liga essa máquina ao computador cadastrado.
+
+> [!NOTE]
+> Só em português do Brasil, e a moeda é o real. O agente roda em Linux. O painel roda a partir do
+> código-fonte, com o Postgres no Docker.
+
+## O que ele faz
+
+- **Computadores:** etiqueta e série, entrega e devolução, baixa que se reverte, lixeira e o histórico de cada um.
+- **Postos:** um computador por posto, quem está em cada turno, e Registrar saída.
+- **Estoque:** o que se conta por quantidade, entregue a colaborador ou posto; a peça instalada mostra o computador.
+- **Licenças:** quantidade comprada, chaves, entregas, e o aviso do que vence nos próximos 30 dias ou já venceu.
+- **Agentes:** a máquina se liga ao computador pela série, manda CPU, memória e disco, e recebe desligar,
+  reiniciar e suspender.
+- **Três cargos:** o Técnico opera; o Supervisor exclui, dá baixa e vê o valor da compra; o Administrador cuida
+  dos usuários. Toda escrita guarda quem fez.
+- **O banco recusa o que não pode ser:** o que está em uso não se exclui, nenhuma data fica no futuro e nada
+  acontece antes da compra.
+
+## Como funciona
+
+```mermaid
+flowchart LR
+  navegador["Navegador"] -- "/api" --> api["SentinelWeb<br/>API e painel"]
+  agente["SentinelAgente<br/>em cada máquina"] -- "WebSocket /agent-hub" --> api
+  api --> banco[("PostgreSQL")]
 ```
-server/
-├── server.ts              # bootstrap: valida env, checa banco, registra, sobe
-├── infra/                 # config, database, errors, http, jobs, lifecycle, logger
-└── modules/<nome>/        # maestro (rotas) → controllers → use-cases → prisma
-    └── access · agent · api-docs · asset · assignment · audit · auth · catalog · endpoint
-    └── license · occupancy · person · reconciliation · settings · stock · user
-    └── workstation · shared
 
-src/
-├── App.tsx                # moldura e rotas
-├── api/                   # apiClient (axios) + queryClient (TanStack Query)
-├── queries/               # <nome>.queries.ts (TanStack Query), um por recurso
-├── stores/                # <nome>.store.ts (zustand): o estado que só existe no navegador
-├── types/                 # o contrato da API
-├── components/ hooks/ helpers/   # o que as páginas compartilham
-└── pages/<contexto>/      # index.tsx · hooks/ · components/ · helpers/
-```
+A API é Fastify com Prisma, e o painel é React com Vite. O agente fica conectado e responde aos comandos do
+painel; o que ele manda e recebe está em [`agente.md`](./docs/referencia/agente.md).
 
-A regra das camadas é **verificada pelo lint** (`no-restricted-imports`
-por camada): import que sobe a seta reprova o `bun run lint`, com a mensagem do que
-fazer no lugar.
+## Telas
 
-**A convenção completa — onde cada coisa vai, como adicionar um domínio novo e
-quando quebrar em use-cases — está em [`docs/referencia/arquitetura.md`](./docs/referencia/arquitetura.md).**
-Leia antes de criar arquivo novo.
+<table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/readme/ficha-do-computador-escuro.jpg">
+        <source media="(prefers-color-scheme: light)" srcset=".github/readme/ficha-do-computador-claro.jpg">
+        <img src=".github/readme/ficha-do-computador-claro.jpg" alt="A ficha de um computador, com o histórico de entregas, licenças e componentes">
+      </picture>
+      <p align="center">A ficha do computador e o histórico dele</p>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/readme/agente-escuro.jpg">
+        <source media="(prefers-color-scheme: light)" srcset=".github/readme/agente-claro.jpg">
+        <img src=".github/readme/agente-claro.jpg" alt="A ficha de uma máquina com o agente: o que ela diz de si, CPU, memória, disco e os comandos">
+      </picture>
+      <p align="center">A máquina que o agente apresenta, agora</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/readme/licencas-escuro.jpg">
+        <source media="(prefers-color-scheme: light)" srcset=".github/readme/licencas-claro.jpg">
+        <img src=".github/readme/licencas-claro.jpg" alt="A lista de Licenças, com o aviso da que venceu e da que vence em breve">
+      </picture>
+      <p align="center">As licenças e o que vence</p>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/readme/postos-escuro.jpg">
+        <source media="(prefers-color-scheme: light)" srcset=".github/readme/postos-claro.jpg">
+        <img src=".github/readme/postos-claro.jpg" alt="A lista de Postos: quem está em cada um, o computador e o status">
+      </picture>
+      <p align="center">Os postos, ocupados e vagos</p>
+    </td>
+  </tr>
+</table>
 
-O visual é da decisão AY: tema claro e escuro, azulado, em `src/index.css`, com variáveis
-CSS do Tailwind. Os primitivos ficam em `src/components/ui/`.
+O menu inteiro, tela por tela, está em [`telas.md`](./docs/referencia/telas.md#o-menu).
 
-## ❤️ Saúde do serviço
+## Rodar
 
-| Rota | Para que serve |
-| --- | --- |
-| `GET /health` | Liveness: o processo está de pé. É o health check do container |
-| `GET /health/ready` | Readiness: banco respondendo + agentes conectados. 503 se o banco cair |
-
-Toda resposta leva `X-Request-Id`, que aparece na linha de log da requisição e na auditoria (`audit_logs.requestId`). O número é sempre gerado pelo servidor: o que o cliente mandar é ignorado.
-
-## 🚀 Telas
-
-Na ordem do menu, que se agrupa por assunto ([AH](./docs/decisoes/acesso.md#ah--o-menu-por-assunto-o-colaborador-ganha-página-própria-e-ativos-vira-computadores)). Os endereços antigos — `/ativos`, `/itam`, `/users/:id` e `/configuracoes/colaboradores/:id` — redirecionam para os novos.
-
-| Seção do menu | Rota | O que é | Cargo mínimo |
-| --- | --- | --- | --- |
-| **Computadores** | `/computadores` | Listagem de computadores — filtros, busca por etiqueta/série, ações de ciclo de vida | TECNICO |
-|  | `/computadores/:id` | Ficha do computador — abas **Responsáveis** (com a devolução), **Licenças**, **Componentes**, **Máquina** (link para a ficha da máquina, telemetria e comando, quando há agente) e **Histórico** | TECNICO |
-|  | `/postos` | Postos de trabalho (mesas), cada um numa localização — quem está, a etiqueta do computador, se está vago; criar, editar e excluir posto | TECNICO |
-|  | `/postos/:id` | Ficha do posto — abas **Responsáveis** (corrigir o turno, registrar a saída), **Computador**, **Máquina** (link para a ficha da máquina, telemetria e comandos), **Estoque** e **Histórico** | TECNICO |
-| **Recursos** | `/estoque` | O que tem quantidade em vez de patrimônio — o total, quantos em uso e com quem; entrega e devolução a colaborador ou posto, com o dia | TECNICO |
-|  | `/estoque/:id` | Ficha do item — a conta e o cadastro no card, abas **Responsáveis** (com a devolução; **Computadores** no componente, e o consumível não tem) e **Histórico** | TECNICO |
-|  | `/licencas` | Contratos de software: quantidade comprada, chaves, entregas a colaborador ou computador; a encerrada fica na lista, com Reabrir | TECNICO |
-|  | `/licencas/:id` | Ficha da licença — a conta e o cadastro no card, abas **Responsáveis** (com a devolução), **Chaves** e **Histórico** | TECNICO |
-| **Convergência** | `/agentes` | As máquinas com o SentinelAgente — a série única liga a máquina ao computador sozinha; a vista Com computador desvincula, a Sem computador vincula à mão, e a Sumidos mostra quem parou de dar sinal. A busca acha a máquina pelo IP, e o `⋯` atualiza a máquina agora. Excluir a máquina é do Supervisor | TECNICO |
-|  | `/agentes/:id` | Ficha da máquina — o que ela diz de si no card, com Vincular ou Desvincular, e no `⋯` o Atualizar agora e o Excluir; o aviso de qual computador ela parece ser; e as abas **Computador** (o vinculado, ou o Vincular) e **Máquina** (telemetria e comandos) | TECNICO |
-| **Pessoas** | `/colaboradores` | Quem recebe equipamento — criar, editar, desativar, excluir para a lixeira e restaurar. Não entra no sistema: quem opera é usuário | TECNICO |
-|  | `/colaboradores/:id` | Ficha do colaborador — as notas, os computadores entregues a ele, os postos ocupados, o estoque e as licenças no nome dele, e o histórico | TECNICO |
-| **Sistema** | `/configuracoes` | As seis abas de referência — categorias, fabricantes, modelos, localizações, status e motivos de baixa | SUPERVISOR |
-| **Gestão** | `/usuarios` | Quem opera o sistema — Técnico, Supervisor ou Administrador (AV). O cadastro pede nome, e-mail e cargo, e a conta nasce com uma senha temporária (o login é o e-mail) | ADMIN |
-
-A convergência RMM × ITAM — vínculo entre a máquina que o agente apresenta e o ativo cadastrado,
-telemetria e comando remoto — mora em Agentes: o vínculo na lista e na ficha da máquina, e a
-telemetria e o comando também na aba Máquina do computador e do posto. O critério de cada tela e o que já existiu e saiu estão em
-[`docs/decisoes/escopo.md`](./docs/decisoes/escopo.md).
-
-## 📋 Requisitos
-*   Node.js v22.x ou superior
-*   Bun (Gerenciador de pacotes)
-*   Docker (Postgres)
-
-## 🔌 Portas
-
-Todas configuráveis pelo `.env` (o único que o servidor lê fora dos testes):
-
-| Serviço  | Porta | Variável        |
-| -------- | ----- | --------------- |
-| Front    | 3000  | `FRONT_PORT`    |
-| Back     | 3001  | `PORT`          |
-| Postgres | 3002  | `POSTGRES_PORT` |
-
-Ao trocar `POSTGRES_PORT`, ajuste também a porta dentro de `DATABASE_URL` — o servidor
-lê o `.env` com `process.loadEnvFile()`, que não expande `${VAR}`.
-
-O frontend nunca aponta para uma porta fixa: as chamadas saem em `/api` relativo
-(`src/api/apiClient.ts`) e o Vite faz o proxy para o backend em dev. Só quando painel e
-API ficam em hosts diferentes o build lê `VITE_API_URL`.
-
-As variáveis ficam num `.env` só, na raiz — modelo em [`.env.example`](./.env.example).
-O servidor valida o que é obrigatório no boot e não sobe sem isso. Os testes têm o seu,
-`.env.test`, versionado e sem segredo, lido pelos dois harnesses (Vitest e Playwright).
-
-## 🛠️ Desenvolvimento
+Precisa de Node.js 22 ou mais novo, Bun e Docker.
 
 ```bash
-# 1. Instalação
 bun install
-
-# 2. Ambiente
 cp .env.example .env
-
-# 3. Banco
 docker compose up -d
 bun run db:migrate
-bun run db:generate
-bun run db:seed      # configuração, categorias, status e motivos de baixa — sem conta nenhuma
-
-# 4. Rodar modo dev (Vite + API, com reload nos dois)
-bun run dev
+bun run db:seed:demo    # dados de exemplo e a conta admin@sentinel.com (senha admin)
+bun run dev             # o painel em http://localhost:3000
 ```
 
-| Script | O que faz |
-| --- | --- |
-| `dev` | Vite + API juntos, com reload |
-| `dev:server` | Só a API |
-| `build` | Typecheck dos 2 projetos TS (front e Node) + build do front |
-| `start` | Produção: a API serve o `dist` |
-| `lint` | ESLint em todo `.ts`/`.tsx` do repositório (menos `dist/`), com as regras de camada e a de cor fixa |
-| `typecheck` | `tsc -b` dos 2 projetos TS, sem build |
-| `test` / `test:watch` | Vitest contra o banco `sentineldb_test` (descartável). Ver [`docs/referencia/testes.md`](./docs/referencia/testes.md) |
-| `test:e2e` | Playwright: o build de produção na porta 4173, o banco `sentineldb_e2e_test` (descartável) e o Chromium clicando na tela. `bunx playwright install chromium` uma vez por máquina |
-| `e2e:servidor` | O servidor que o `test:e2e` sobe e derruba, com o ambiente que o `playwright.config.ts` monta do `.env.test`: prepara o banco, faz o build e serve o `dist` na porta 4173 |
-| `check` | `lint`, `typecheck`, `test` e `test:e2e`, nessa ordem. É o que passa antes de dar uma mudança por pronta, e o que a CI (`.github/workflows/ci.yml`) roda a cada push na `main` |
-| `db:migrate` / `db:generate` / `db:studio` | Prisma |
-| `db:seed` | O seed principal: categorias, status, motivos de baixa e configuração. Não cria conta ([T](./docs/decisoes/acesso.md#t--não-há-conta-semeada)): o primeiro administrador nasce pelo `acesso:administrador` ([AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it)). Roda em todo banco |
-| `db:seed:demo` | O principal mais dados de exemplo — a conta `admin@sentinel.com` (senha `admin`), fabricantes, modelos, localizações, postos, computadores, cinco colaboradores, licenças e itens de estoque. Só para desenvolvimento e demonstração. Ver [`docs/referencia/configuracoes.md`](./docs/referencia/configuracoes.md#o-que-vem-semeado) |
-| `acesso:administrador` | Cria um administrador: `--nome "Nome Completo" --email "e-mail" --senha "senha"`. É a primeira conta da instalação nova e a saída de quem perdeu a senha — o novo entra e gera a senha temporária da conta antiga em Usuários. Roda no servidor, fora da API — ver [AP](./docs/decisoes/acesso.md#ap--o-administrador-nasce-por-comando-como-no-snipe-it) e a invariante 17 em [`docs/referencia/invariantes.md`](./docs/referencia/invariantes.md) |
+As portas, o `.env`, os scripts e como rodar em produção estão em
+[`preparar-o-ambiente.md`](./docs/guias/preparar-o-ambiente.md).
 
-### Migrations
+## Documentação
 
-`prisma migrate dev` é interativo e falha em terminal não interativo — **nunca** o use aqui.
-Cada mudança de `schema.prisma` é uma migration nova, aplicada por `bun run db:migrate`, e a
-`0_init` não se edita. A receita — gerar o SQL, escrever à mão o `CHECK` e o índice parcial,
-aplicar e conferir que nada divergiu — está em
-[`docs/guias/criar-uma-migration.md`](./docs/guias/criar-uma-migration.md).
+- [`docs/README.md`](./docs/README.md): o mapa da documentação e por onde entrar.
+- [`arquitetura.md`](./docs/referencia/arquitetura.md): as camadas, os módulos e o que o lint recusa.
+- [`invariantes.md`](./docs/referencia/invariantes.md): o que o banco recusa, e onde.
+- [`decisoes/`](./docs/decisoes/README.md): o porquê de cada regra.
 
-## 📄 Licença
+Dúvida ou bug: abra uma [issue](https://github.com/pauloeduas-software/SentinelWeb/issues).
+
+## Licença
 
 **[GNU AGPL, versão 3 ou posterior](./LICENSE)** (`AGPL-3.0-or-later`). Qualquer um pode usar, alterar e
 redistribuir. Quem redistribuir, alterado ou não, mantém a mesma licença e entrega o código-fonte; quem alterar

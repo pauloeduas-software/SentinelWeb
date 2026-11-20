@@ -3,7 +3,7 @@
 > O que chega do SentinelAgente e o que o servidor faz com isso: o cadastro, a conexão, as três
 > mensagens e os comandos. O porquê de cada regra do servidor está nas decisões citadas; as regras do
 > agente moram no repositório dele. A tela que mostra a máquina é a de Agentes, no
-> [`README.md`](../../README.md#-telas).
+> [menu](./telas.md#o-menu).
 
 ---
 

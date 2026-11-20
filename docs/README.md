@@ -7,7 +7,7 @@
 | Pasta | A regra | O que mora lá |
 |---|---|---|
 | [`referencia/`](./referencia/) | **É verdade AGORA.** Mudou o código, muda aqui. Não conta história, não dá instrução. | o que o sistema é: camadas, modelo de posse, invariantes, acesso, telas, testes, configurações, baixa do ativo, postos, colaboradores, licenças, estoque, o que chega do agente |
-| [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | criar uma migration, adicionar um domínio, escrever um teste, acrescentar uma invariante |
+| [`guias/`](./guias/) | **Começa com um verbo.** Receita para quem já sabe o que quer. | preparar o ambiente, criar uma migration, adicionar um domínio, escrever um teste, acrescentar uma invariante |
 | [`decisoes/`](./decisoes/) | **Não se reescreve.** Se a realidade mudou, a decisão é *superada* por outra, com link entre as duas. | as decisões numeradas (`D1`…`D164`) e as por letra (de `A` em diante), um arquivo por assunto |
 
 E um arquivo na raiz: este mapa. Não há lista do que falta fazer — o que o sistema deixou de
@@ -21,13 +21,16 @@ fazer, e por quê, está em [`decisoes/escopo.md`](./decisoes/escopo.md).
 que não se negocia, o vocabulário e o que já foi decidido que não volta. Dali, o mesmo caminho de
 quem vai mexer no código.
 
+**Vou subir o projeto.** [`guias/preparar-o-ambiente.md`](./guias/preparar-o-ambiente.md): o que
+instalar, as portas, o `.env`, os scripts e como rodar em produção.
+
 **Vou mexer no código.** Comece em [`referencia/arquitetura.md`](./referencia/arquitetura.md) —
 as camadas, os módulos e o que o lint recusa. Se o que você vai mexer tem a ver com
 quem responde por um equipamento, [`referencia/modelo-de-posse.md`](./referencia/modelo-de-posse.md)
 é pré-requisito, não leitura opcional.
 
-**Vou mexer numa tela.** [`referencia/telas.md`](./referencia/telas.md) diz as peças e o molde da lista,
-da ficha e do formulário: toda tela segue o mesmo.
+**Vou mexer numa tela.** [`referencia/telas.md`](./referencia/telas.md) diz o menu, as peças e o molde
+da lista, da ficha e do formulário: toda tela segue o mesmo.
 
 **Vou mexer em rota, cookie ou permissão.** [`referencia/acesso.md`](./referencia/acesso.md).
 Rota nova nasce negada, e rota sem permissão declarada **derruba o boot** — é melhor saber disso
