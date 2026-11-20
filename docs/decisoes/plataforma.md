@@ -8,7 +8,7 @@
 >
 > Decisões neste arquivo: D4, D6, D79, D81, D83–D84, D86, e L/M da segunda rodada (ver
 > [`README.md`](./README.md#a-segunda-rodada-ap)), AQ, AS, AT, AY, AZ, BA, BB, BC, BF, BG, BH, BK, BR, BS, BT, BU, CA, CC,
-> CD, CE, CH, CI, CJ, CM, DH e DN.
+> CD, CE, CH, CI, CJ, CM, DH, DN e DO.
 
 ---
 
@@ -1039,3 +1039,38 @@ Ela também chega sozinha aos bancos de teste, que rodam `migrate deploy` a cada
 **O custo:** o `DROP COLUMN` de uma coluna citada num `CHECK` pede o `DROP CONSTRAINT` +
 `ADD CONSTRAINT` dentro da migration nova, e a mudança que não é aditiva vai em duas migrations.
 A receita está em [`../guias/criar-uma-migration.md`](../guias/criar-uma-migration.md).
+
+---
+
+## DO — O SentinelWeb é AGPL-3.0-or-later
+
+**Decisão.** O repositório deixa de ser "sem licença", que vale como todos os direitos reservados, e passa a
+ser [GNU AGPL, versão 3 ou posterior](../../LICENSE): o texto oficial no `LICENSE`, o campo `license` do
+`package.json`, a seção do `README.md` e o `info.license` do Swagger.
+
+- **Qualquer um usa, altera e redistribui.** Quem redistribuir, alterado ou não, mantém a mesma licença e
+  entrega o código-fonte; quem alterar e oferecer a outros pela rede, também.
+- **Código de terceiros copiado para o repositório leva o aviso da licença dele ao lado:** os primitivos que
+  vieram do shadcn/ui, que é MIT, têm o dele em
+  [`src/components/ui/LICENSE-shadcn-ui.md`](../../src/components/ui/LICENSE-shadcn-ui.md).
+- **Dependência nova tem licença compatível:** permissiva (MIT, ISC, BSD, Apache-2.0) ou GPL e AGPL 3.
+  GPL-2.0-only, SSPL e licença proprietária não entram. Na data desta decisão, a árvore de produção inteira
+  era permissiva.
+
+**Por quê:** o projeto quer que todo mundo use, e que ninguém revenda o Sentinel alterado com o código fechado.
+Só o copyleft garante a segunda metade, e só a AGPL fecha o caminho do serviço: o painel roda num servidor, e
+quem o oferece pela rede não distribui o programa, então a GPL não cobraria o código. É o que fazem as
+referências com painel web: Snipe-IT, iTop e Shelf.nu são AGPL-3.0, e o GLPI, GPL-3.0. O "ou posterior"
+deixa subir para uma versão futura da licença, como o GLPI fez da GPL-2.0 para a 3.0.
+
+**Descartado:**
+- **MIT ou Apache-2.0**, como o Fleet e o MeshCentral: qualquer um fecha e vende. E a versão que sai com
+  licença permissiva fica assim para sempre: endurecer depois só vale para as versões novas, enquanto a AGPL
+  pode ser aberta depois, até nas versões antigas.
+- **GPL-3.0:** deixa aberto o caminho do serviço.
+- **Licença de código disponível** (BSL, FSL, a do Tactical RMM): não é código aberto, afasta quem usaria e
+  não protege nada que a AGPL não proteja.
+
+**O custo:** há empresa que veta AGPL por política, mesmo para uso interno, como o Google. E a contribuição
+de fora entra com a licença do repositório, mas continua sendo de quem a escreveu: mudar a licença depois
+depende dessa pessoa.

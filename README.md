@@ -145,3 +145,11 @@ Cada mudança de `schema.prisma` é uma migration nova, aplicada por `bun run db
 `0_init` não se edita. A receita — gerar o SQL, escrever à mão o `CHECK` e o índice parcial,
 aplicar e conferir que nada divergiu — está em
 [`docs/guias/criar-uma-migration.md`](./docs/guias/criar-uma-migration.md).
+
+## 📄 Licença
+
+**[GNU AGPL, versão 3 ou posterior](./LICENSE)** (`AGPL-3.0-or-later`). Qualquer um pode usar, alterar e
+redistribuir. Quem redistribuir, alterado ou não, mantém a mesma licença e entrega o código-fonte; quem alterar
+e oferecer a outros pela rede, também. Vem sem garantia nenhuma. Parte de `src/components/ui/` vem do
+shadcn/ui, sob MIT, com o [aviso](./src/components/ui/LICENSE-shadcn-ui.md) ao lado. O porquê da escolha está
+na [DO](./docs/decisoes/plataforma.md#do--o-sentinelweb-é-agpl-30-or-later).

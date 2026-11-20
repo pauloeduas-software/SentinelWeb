@@ -65,6 +65,7 @@ export class ApiDocsMaestro {
           title: 'SentinelWeb API',
           description: 'Inventário de TI com convergência RMM. Entre pelo painel (ou por `POST /api/auth/login`): a sessão vai no cookie.',
           version: 'dev',
+          license: { name: 'AGPL-3.0-or-later', url: 'https://www.gnu.org/licenses/agpl-3.0.html' },
         },
         tags: [...new Set(Object.values(CONTRATO).map((c) => c.tag))].map((name) => ({ name })),
         components: { securitySchemes: { sessao: { type: 'apiKey', in: 'cookie', name: COOKIE_SESSAO } } },
